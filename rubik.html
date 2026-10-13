@@ -149,6 +149,8 @@ body { background: var(--bg); color: var(--fg); font-family: var(--font-ui); }
 .sol-steps .mv span { color: var(--muted); opacity: .6; border-radius: 4px; padding: 0 2px; }
 .sol-steps .mv span.done { color: var(--fg); opacity: 1; }
 .sol-steps .mv span.next { color: var(--accent); opacity: 1; font-weight: 700; box-shadow: inset 0 -2px 0 var(--accent); }
+.stg.has-case { display: grid; grid-template-columns: minmax(0, 1fr) 48px; gap: 10px; align-items: start; }
+.case-pic svg { width: 48px; height: 48px; display: block; }
 .sol-steps .mv em { font-style: normal; color: var(--muted); font-family: var(--font-ui); font-size: 12px; }
 .sol-ctrl { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; padding-top: 12px; border-top: 1px solid var(--line); }
 .sol-ctrl button { padding: 9px 12px; }
@@ -260,6 +262,9 @@ button.link:hover { background: none; }
 .dlg-tools { display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: center; padding: 12px 20px; border-bottom: 1px solid var(--line); }
 .dlg-tools .seg { width: 230px; }
 .dlg-tools .presets { margin: 0; }
+.dlg-tools .io { margin-left: auto; }
+.io-msg { flex-basis: 100%; margin: 0; font-size: 12px; color: var(--muted); }
+.io-msg.bad { color: var(--warn); }
 .case-list { overflow-y: auto; min-height: 0; padding: 4px 20px 20px; }
 .case { display: grid; grid-template-columns: auto 64px minmax(0, 1fr); gap: 4px 14px; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--line); }
 .case:last-child { border-bottom: 0; }
@@ -293,6 +298,9 @@ button.link:hover { background: none; }
   .solpanel { border-right: 0; border-top: 1px solid var(--line); padding: 12px 16px; gap: 10px; }
   .sol-big b { font-size: 26px; }
   .sol-steps .mv { font-size: 15px; }
+  .sol-ctrl .lg { display: none; }
+  .sol-ctrl button { padding: 9px 10px; }
+  .sol-ctrl button.primary { min-width: 72px; }
   .panel { border-left: 0; border-top: 1px solid var(--line); padding: 16px 16px 24px; }
   .ov-top { padding-top: 12px; gap: 8px; }
   .scramble-bar { padding: 8px 10px; gap: 8px; }
@@ -339,9 +347,9 @@ button.link:hover { background: none; }
     <div class="sol-steps" id="sol-steps"></div>
     <div class="sol-ctrl" id="sol-ctrl">
       <button type="button" id="sol-restart" title="Turn the cube back to the scrambled state">↺ Restart</button>
-      <button type="button" id="sol-prev" title="Undo one solution move">‹ Back</button>
+      <button type="button" id="sol-prev" title="Go back to the start of this step (←: one move)">‹ Prev<span class="lg"> step</span></button>
       <button type="button" class="primary" id="sol-play">Play</button>
-      <button type="button" id="sol-next" title="Do the next solution move">Step ›</button>
+      <button type="button" id="sol-next" title="Play every move of the next step: Cross, F2L 1, … (→: one move)">Next<span class="lg"> step</span> ›</button>
       <span class="pos" id="sol-pos"></span>
     </div>
   </aside>
@@ -447,6 +455,7 @@ button.link:hover { background: none; }
         <kbd>W</kbd> then a face for a wide turn (r, u, f…) ·
         <kbd>Space</kbd> scramble ·
         <kbd>Enter</kbd> CFOP solve ·
+        <kbd>←</kbd> <kbd>→</kbd> one solution move ·
         <kbd>Backspace</kbd> undo
       </p>
     </section>
@@ -471,6 +480,12 @@ button.link:hover { background: none; }
       <button type="button" data-preset="2look" title="Only the cases of 2-look OLL / PLL">2-look set</button>
       <button type="button" data-preset="defaults" title="Put back the standard algorithm for every case">Standard algorithms</button>
     </div>
+    <div class="presets io">
+      <button type="button" data-io="export" title="Save your OLL and PLL choices to a file">Export</button>
+      <button type="button" data-io="import" title="Load OLL and PLL choices from an exported file">Import…</button>
+      <input type="file" id="alg-file" accept=".json,application/json" hidden>
+    </div>
+    <p class="io-msg" id="alg-io-msg" role="status" hidden></p>
   </div>
   <div class="case-list" id="case-list"></div>
 </dialog>
@@ -838,7 +853,7 @@ function CFOP_FACTORY() {
       const hits = [], next = new Map();
       for (const node of frontier) for (const alg of algs) for (let a = 0; a < 4; a++) {
         const moves = a ? [AUF[a], ...alg.toks] : alg.toks;
-        const item = { c: applyP(node.c, alg.pre[a]), looks: [...node.looks, { id: alg.id, moves }], len: node.len + moves.length };
+        const item = { c: applyP(node.c, alg.pre[a]), looks: [...node.looks, { id: alg.id, moves, before: node.c }], len: node.len + moves.length };
         if (done(item)) hits.push(item);
         else if (d < MAX_LOOKS) {
           const k = key(item.c), old = next.get(k);
@@ -885,16 +900,18 @@ function CFOP_FACTORY() {
     if (!best) throw err;
     return best;
   }
+  // Last-layer stickers of a state, for drawing it as a case diagram
+  const llView = c => LL_SLOTS.map(i => ({ p: SLOTS[i].p, n: SLOTS[i].n, c: c[i] }));
   const lookNote = (name, i, n) => [name, n > 1 ? `look ${i + 1} of ${n}` : ''].filter(Boolean).join(' · ');
   function llStages({ oll, pll }) {
     const out = [];
     if (!oll.looks.length) out.push({ kind: 'oll', label: 'OLL', note: 'skip', moves: [] });
-    oll.looks.forEach((l, i, a) => out.push({ kind: 'oll', label: `OLL ${l.id}`, note: lookNote(OLL_NAMES[l.id] || '', i, a.length), moves: l.moves }));
+    oll.looks.forEach((l, i, a) => out.push({ kind: 'oll', label: `OLL ${l.id}`, note: lookNote(OLL_NAMES[l.id] || '', i, a.length), moves: l.moves, view: llView(l.before) }));
     if (!pll.looks.length) {
       out.push({ kind: 'pll', label: pll.moves.length ? 'AUF' : 'PLL', note: pll.moves.length ? 'already permuted' : 'skip', moves: pll.moves });
     }
     pll.looks.forEach((l, i, a) => out.push({
-      kind: 'pll', label: 'PLL', note: lookNote(`${l.id}-perm`, i, a.length),
+      kind: 'pll', label: 'PLL', note: lookNote(`${l.id}-perm`, i, a.length), view: llView(l.before),
       moves: i === a.length - 1 && pll.post ? [...l.moves, pll.post] : l.moves,
     }));
     return out;
@@ -925,8 +942,7 @@ function CFOP_FACTORY() {
   }
   // Last-layer stickers of a case, for drawing its diagram
   function caseView(kind, id) {
-    const c = caseState(kind, id);
-    return LL_SLOTS.map(i => ({ p: SLOTS[i].p, n: SLOTS[i].n, c: c[i] }));
+    return llView(caseState(kind, id));
   }
 
   // ---- stitching ----
@@ -1663,7 +1679,9 @@ function CFOP_FACTORY() {
       const moves = s.moves.length
         ? s.moves.map(tok => `<span data-g="${gi++}"${/^[xyz]/.test(tok) ? ' class="rot" title="Rotate the whole cube"' : ''}>${tok}</span>`).join('')
         : `<em>${s.kind === 'f2l' ? 'already solved, nothing to do' : 'nothing to do'}</em>`;
-      return `<div class="stg" data-stage="${si}">${head}<div class="mv">${moves}</div></div>`;
+      if (!s.view) return `<div class="stg" data-stage="${si}">${head}<div class="mv">${moves}</div></div>`;
+      const pic = `<span class="case-pic" title="The top layer before this step, held as the solution says">${llSvg(s.view, s.kind)}</span>`;
+      return `<div class="stg has-case" data-stage="${si}"><div>${head}<div class="mv">${moves}</div></div>${pic}</div>`;
     }).join('');
     updateSolutionProgress();
   }
@@ -1713,20 +1731,21 @@ function CFOP_FACTORY() {
     setChip('turning');
     updateSolutionProgress();
   }
-  function solutionRewind(then) {
+  // Turn the solution back to position `to` (default: the scramble)
+  function solutionRewind(then, to = 0) {
     if (!sol || !sol.flat || sol.rewinding) return;
-    if (sol.pos === 0) { if (then) then(); return; }
+    if (sol.pos <= to) { if (then) then(); return; }
     sol.playing = false;
-    if (busy()) { sol.rewindPending = then || true; return; }   // runs once the current turn lands
+    if (busy()) { sol.rewindPending = { then, to }; return; }   // runs once the current turn lands
     sol.rewinding = true;
     sol.afterRewind = then || null;
-    const factor = sol.pos > 20 ? 0.3 : 0.5;
-    for (let i = sol.pos - 1; i >= 0; i--) {
+    const factor = sol.pos - to > 20 ? 0.3 : 0.5;
+    for (let i = sol.pos - 1; i >= to; i--) {
       enqueue(inverse(moveFromToken(sol.flat[i].tok)), 'cfop-back', factor);
       const last = history[history.length - 1];
       if (last && last.kind === 'cfop') history.pop();
     }
-    sol.pos = 0;
+    sol.pos = to;
     renderHistory();
     setChip('turning');
     updateSolutionProgress();
@@ -1743,12 +1762,12 @@ function CFOP_FACTORY() {
       return;
     }
     if (sol.rewindPending && !queue.length) {
-      const pending = sol.rewindPending;
+      const { then, to } = sol.rewindPending;
       sol.rewindPending = null;
-      solutionRewind(typeof pending === 'function' ? pending : undefined);
+      solutionRewind(then, to);
       return;
     }
-    if (sol.playing && sol.pos < sol.flat.length) {
+    if (sol.playing && sol.pos < sol.target) {
       solutionStep();
     } else {
       sol.playing = false;
@@ -1770,15 +1789,40 @@ function CFOP_FACTORY() {
     appEl.classList.remove('with-sol');
   }
 
+  // Stage boundaries: Next / Prev step move a whole stage (Cross, F2L 1, …, OLL, PLL) at a time
+  function stageEnd(pos) {
+    let i = pos;
+    while (i < sol.flat.length && sol.flat[i].stage === sol.flat[pos].stage) i++;
+    return i;
+  }
+  function stageStartBefore(pos) {      // start of the stage holding the last move played
+    if (pos === 0) return 0;
+    let i = pos - 1;
+    while (i > 0 && sol.flat[i - 1].stage === sol.flat[pos - 1].stage) i--;
+    return i;
+  }
+  // Play forward until `target`; if a move is still animating, the next one follows when it lands
+  function playTo(target) {
+    if (!sol || !sol.flat || sol.rewinding || sol.pos >= sol.flat.length) return;
+    sol.target = target;
+    sol.playing = true;
+    solutionStep();
+    updateSolutionProgress();
+  }
+  function singleMove(forward) {
+    if (!sol || !sol.flat || sol.rewinding) return;
+    if (!forward) { solutionBack(); return; }
+    sol.playing = false;
+    solutionStep();
+    updateSolutionProgress();
+  }
   solPlay.addEventListener('click', () => {
     if (!sol || !sol.flat) return;
     if (sol.playing) { sol.playing = false; updateSolutionProgress(); return; }
-    sol.playing = true;
-    solutionStep();   // if a move is still animating, the next one follows when it lands
-    updateSolutionProgress();
+    playTo(sol.flat.length);
   });
-  solNext.addEventListener('click', () => { if (sol) { sol.playing = false; solutionStep(); updateSolutionProgress(); } });
-  solPrev.addEventListener('click', solutionBack);
+  solNext.addEventListener('click', () => { if (sol && sol.flat) playTo(stageEnd(sol.pos)); });
+  solPrev.addEventListener('click', () => { if (sol && sol.flat) solutionRewind(null, stageStartBefore(sol.pos)); });
   document.getElementById('sol-close').addEventListener('click', closeSolution);
   solRestart.addEventListener('click', () => solutionRewind());
   solColors.addEventListener('click', e => {
@@ -1887,10 +1931,12 @@ function CFOP_FACTORY() {
     solAlgSum.textContent = txt;
   }
 
-  // Top-down diagram of a case: the 3x3 top face plus the side stickers of the top layer
-  function caseSvg(kind, id) {
-    const rects = libApi.caseView(kind, id).map(({ p: [x, , z], n: [nx, ny, nz], c }) => {
-      const fill = c === 'U' ? COLORS.D : kind === 'oll' ? 'var(--case-off)' : COLORS[c];
+  // Top-down diagram of a last layer: the 3x3 top face plus the side stickers of the top layer.
+  // OLL shows only which stickers have the top color; PLL shows the real side colors.
+  function llSvg(cells, kind, topFill) {
+    const top = cells.find(s => s.n[1] && !s.p[0] && !s.p[2]).c;
+    const rects = cells.map(({ p: [x, , z], n: [nx, ny, nz], c }) => {
+      const fill = c === top ? topFill || COLORS[top] : kind === 'oll' ? 'var(--case-off)' : COLORS[c];
       let rx, ry, w = 12, h = 12;
       if (ny) { rx = 11 + (x + 1) * 14; ry = 11 + (z + 1) * 14; }
       else if (nz) { rx = 11 + (x + 1) * 14; ry = nz > 0 ? 56 : 3; h = 5; }
@@ -1899,6 +1945,7 @@ function CFOP_FACTORY() {
     });
     return `<svg viewBox="0 0 64 64" aria-hidden="true"><rect x="9" y="9" width="44" height="44" rx="4" fill="#15171c"/>${rects.join('')}</svg>`;
   }
+  const caseSvg = (kind, id) => llSvg(libApi.caseView(kind, id), kind, COLORS.D);   // picker: yellow top by convention
   const caseName = (kind, id) => kind === 'oll' ? `OLL ${id}` : `${id}-perm`;
   function caseRow(kind, id) {
     const name = caseName(kind, id), nick = kind === 'oll' ? LIB.OLL_NAMES[id] : '';
@@ -1937,6 +1984,7 @@ function CFOP_FACTORY() {
   }
   function openAlgDialog() {
     algsChanged = false;
+    algIoMsg.hidden = true;
     renderCases();
     if (algDlg.showModal) algDlg.showModal(); else algDlg.setAttribute('open', '');
   }
@@ -1969,6 +2017,59 @@ function CFOP_FACTORY() {
       else setPref(algKind, id, { alg: '' });
     }
     renderCases();
+  });
+
+  // Export / import the whole set as JSON: { app, version, oll: { id: { on, alg } }, pll: { … } }
+  const algIoMsg = document.getElementById('alg-io-msg');
+  const algFile = document.getElementById('alg-file');
+  function ioMsg(text, bad) { algIoMsg.textContent = text; algIoMsg.classList.toggle('bad', !!bad); algIoMsg.hidden = false; }
+  function exportAlgs() {
+    const dump = kind => Object.fromEntries(CASES[kind].map(id => [id, { on: isOn(kind, id), alg: algOf(kind, id) }]));
+    const data = { app: 'rubiks-cube-lab', version: 1, oll: dump('oll'), pll: dump('pll') };
+    const url = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }));
+    const a = document.createElement('a');
+    a.href = url; a.download = 'cfop-algorithms.json';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    ioMsg('Saved cfop-algorithms.json');
+  }
+  // Every algorithm is checked against its case; anything that doesn't fit is skipped and listed
+  async function importAlgs(file) {
+    if (file.size > 200000) { ioMsg('That file is too big to be an algorithm set.', true); return; }
+    let data;
+    try { data = JSON.parse(await file.text()); } catch (_) { ioMsg('That file is not valid JSON.', true); return; }
+    if (!data || !data.oll || !data.pll || typeof data.oll !== 'object' || typeof data.pll !== 'object') {
+      ioMsg('No OLL / PLL algorithms found in that file.', true);
+      return;
+    }
+    let used = 0;
+    const skipped = [];
+    for (const kind of ['oll', 'pll']) for (const [id, v] of Object.entries(data[kind])) {
+      if (!CASES[kind].includes(id) || !v || typeof v !== 'object') { skipped.push(`${kind.toUpperCase()} ${id}`); continue; }
+      const patch = {};
+      if (typeof v.on === 'boolean') patch.off = !v.on;
+      if (typeof v.alg === 'string') {
+        let alg = '';
+        try { alg = parseAlg(v.alg).map(m => m.name).join(' '); } catch (_) {}
+        if (alg && libApi.checkCase(kind, id, alg)) patch.alg = alg; else skipped.push(caseName(kind, id));
+      }
+      if (Object.keys(patch).length) { setPref(kind, id, patch); used++; }
+    }
+    renderCases();
+    const more = skipped.length > 6 ? '…' : '';
+    ioMsg(`Imported ${plural(used, 'case')}` + (skipped.length
+      ? ` · skipped ${skipped.length} (${skipped.slice(0, 6).join(', ')}${more}): not a known case, or the algorithm doesn't solve it`
+      : ''), skipped.length > 0 && !used);
+  }
+  algDlg.querySelector('.dlg-tools .io').addEventListener('click', e => {
+    const b = e.target.closest('button[data-io]');
+    if (!b) return;
+    if (b.dataset.io === 'export') exportAlgs(); else algFile.click();
+  });
+  algFile.addEventListener('change', () => {
+    const f = algFile.files && algFile.files[0];
+    algFile.value = '';
+    if (f) importAlgs(f);
   });
 
   function updateCaseRow(row, kind, id) {
@@ -2301,6 +2402,11 @@ function CFOP_FACTORY() {
     const onButton = e.target.closest && e.target.closest('button');
     if (e.key === ' ' && !onButton) { e.preventDefault(); scramble(); return; }
     if (e.key === 'Enter' && !onButton) { e.preventDefault(); requestSolve(); return; }
+    if ((e.key === 'ArrowRight' || e.key === 'ArrowLeft') && sol && sol.flat) {
+      e.preventDefault();
+      singleMove(e.key === 'ArrowRight');
+      return;
+    }
     if (e.key === 'Escape' && wideArmed) { setWide(false); return; }
     if (e.key.toUpperCase() === 'W') { e.preventDefault(); setWide(!wideArmed); return; }
     const k = KEYMAP[e.key.toUpperCase()];
