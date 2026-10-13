@@ -1,8 +1,10 @@
+<meta charset="utf-8">
 <title>Rubik's Cube Lab</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
 <style>
-/* Layout: full-bleed 3D stage on the left, an instrument panel on the right (stacks below the stage on phones) */
+/* Layout: full-bleed 3D stage on the left with overlay bands (top: status + scramble, bottom: solution + actions),
+   an instrument panel on the right that stacks below the stage on phones */
 :root {
   --bg: #e8ebf0;
   --stage: #f6f7fa;
@@ -14,6 +16,7 @@
   --btn-hover: #e1e6ed;
   --accent: #0a7d55;
   --accent-fg: #ffffff;
+  --accent-soft: #d9efe5;
   --warn: #b0500a;
   --font-ui: "Archivo", system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, Consolas, monospace;
@@ -21,15 +24,18 @@
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --bg: #0e1014; --stage: #1a1e25; --panel: #161920; --fg: #e7eaf0; --muted: #959dac;
-    --line: #2a2f39; --btn: #1f232b; --btn-hover: #2a2f39; --accent: #3ccb8f; --accent-fg: #05140d; --warn: #f0a35a;
+    --line: #2a2f39; --btn: #1f232b; --btn-hover: #2a2f39; --accent: #3ccb8f; --accent-fg: #05140d;
+    --accent-soft: #173528; --warn: #f0a35a;
     color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
   --bg: #0e1014; --stage: #1a1e25; --panel: #161920; --fg: #e7eaf0; --muted: #959dac;
-  --line: #2a2f39; --btn: #1f232b; --btn-hover: #2a2f39; --accent: #3ccb8f; --accent-fg: #05140d; --warn: #f0a35a;
+  --line: #2a2f39; --btn: #1f232b; --btn-hover: #2a2f39; --accent: #3ccb8f; --accent-fg: #05140d;
+  --accent-soft: #173528; --warn: #f0a35a;
   color-scheme: dark;
 }
+[hidden] { display: none !important; }
 html, body { height: 100%; }
 body { background: var(--bg); color: var(--fg); font-family: var(--font-ui); }
 
@@ -47,10 +53,16 @@ body { background: var(--bg); color: var(--fg); font-family: var(--font-ui); }
 #gl.on-cube { cursor: pointer; }
 #gl.dragging { cursor: grabbing; }
 
-.hud {
-  position: absolute; top: 16px; left: 16px; right: 16px;
-  display: flex; flex-wrap: wrap; gap: 8px; align-items: center; pointer-events: none;
+.overlay {
+  position: absolute; inset: 0; pointer-events: none;
+  display: flex; flex-direction: column; justify-content: space-between;
 }
+.ov-top { padding: 16px 16px 0; display: flex; flex-direction: column; gap: 10px; align-items: center; }
+.ov-bottom {
+  position: relative; padding: 0 16px 12px;
+  display: flex; flex-direction: column; gap: 10px; align-items: center;
+}
+.hud { align-self: stretch; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .chip {
   font: 600 11px/1 var(--font-ui); letter-spacing: .08em; text-transform: uppercase;
   padding: 8px 11px; border-radius: 999px; border: 1px solid var(--line);
@@ -63,18 +75,18 @@ body { background: var(--bg); color: var(--fg); font-family: var(--font-ui); }
   padding: 7px 10px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel);
 }
 .stat span { color: var(--muted); font-family: var(--font-ui); font-size: 11px; letter-spacing: .06em; text-transform: uppercase; margin-right: 6px; }
-.hint {
-  position: absolute; left: 16px; right: 16px; bottom: 14px;
-  text-align: center; color: var(--muted); font-size: 12px; pointer-events: none; text-wrap: balance;
+
+.card {
+  pointer-events: auto;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, .10);
 }
 .scramble-bar {
-  position: absolute; top: 62px; left: 50%; transform: translateX(-50%);
-  width: min(660px, calc(100% - 32px));
+  width: min(660px, 100%);
   display: flex; gap: 12px; align-items: flex-start;
-  background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
-  padding: 10px 12px 10px 14px; box-shadow: 0 8px 28px rgba(0, 0, 0, .10);
+  padding: 10px 12px 10px 14px;
 }
-.scramble-bar .lbl {
+.lbl {
   flex: none; padding-top: 6px;
   font: 600 11px/1 var(--font-ui); letter-spacing: .1em; text-transform: uppercase; color: var(--muted);
 }
@@ -86,20 +98,59 @@ body { background: var(--bg); color: var(--fg); font-family: var(--font-ui); }
 .scramble-moves span.done { color: var(--fg); opacity: 1; }
 .scramble-moves span.on { color: var(--accent); opacity: 1; font-weight: 700; }
 .scramble-bar button { flex: none; font-size: 12px; padding: 5px 10px; }
-.big-scramble {
-  position: absolute; left: 50%; bottom: 40px; transform: translateX(-50%);
+
+/* solution card */
+.solution { width: min(760px, 100%); padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; }
+.sol-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.sol-head h3 { margin: 0; font: 700 15px/1.2 var(--font-ui); }
+.sol-sum { color: var(--muted); font-size: 13px; font-variant-numeric: tabular-nums; }
+.sol-head .x { margin-left: auto; width: 30px; height: 30px; padding: 0; font-size: 18px; line-height: 1; border-radius: 50%; }
+.sol-colors { display: flex; flex-wrap: wrap; gap: 6px; }
+.sol-colors button {
+  display: inline-flex; align-items: center; gap: 6px; padding: 4px 9px 4px 6px; border-radius: 999px;
+  font: 500 12px/1 var(--font-mono); font-variant-numeric: tabular-nums;
+}
+.sol-colors button[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); }
+.sol-colors button:disabled { opacity: .45; cursor: not-allowed; }
+.sol-colors .dot { width: 12px; height: 12px; border-radius: 50%; box-shadow: inset 0 0 0 1px rgba(0,0,0,.25); }
+.sol-colors .best { font-family: var(--font-ui); font-size: 10px; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); font-weight: 700; }
+.sol-steps {
+  max-height: clamp(84px, calc(34vh - 70px), 280px); overflow-y: auto;
+  display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 4px 14px; align-items: baseline;
+}
+.sol-steps .st { font: 600 12px/1.6 var(--font-ui); color: var(--muted); white-space: nowrap; }
+.sol-steps .st small { font-weight: 500; margin-left: 4px; font-variant-numeric: tabular-nums; }
+.sol-steps .st.cur { color: var(--accent); }
+.sol-steps .mv { display: flex; flex-wrap: wrap; gap: 0 9px; font: 500 15px/1.6 var(--font-mono); min-width: 0; }
+.sol-steps .mv span { color: var(--muted); opacity: .6; border-radius: 4px; padding: 0 2px; }
+.sol-steps .mv span.done { color: var(--fg); opacity: 1; }
+.sol-steps .mv span.next { color: var(--accent); opacity: 1; font-weight: 700; box-shadow: inset 0 -2px 0 var(--accent); }
+.sol-steps .mv em { font-style: normal; color: var(--muted); font-family: var(--font-ui); font-size: 12px; }
+.sol-ctrl { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.sol-ctrl button { padding: 7px 12px; }
+.sol-ctrl .pos { margin-left: auto; color: var(--muted); font: 500 12px var(--font-mono); font-variant-numeric: tabular-nums; }
+.sol-msg { margin: 0; color: var(--muted); font-size: 13px; display: flex; align-items: center; gap: 10px; }
+.spinner { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--line); border-top-color: var(--accent); animation: spin .8s linear infinite; flex: none; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.cta-row { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+.big-btn {
+  pointer-events: auto;
   display: flex; align-items: center; gap: 10px;
   font: 700 17px/1 var(--font-ui); letter-spacing: .01em;
   padding: 15px 22px 15px 24px; border: 0; border-radius: 999px;
   background: var(--accent); color: var(--accent-fg);
   box-shadow: 0 10px 28px rgba(0, 0, 0, .22);
 }
-.big-scramble:hover { background: var(--accent); filter: brightness(1.08); }
-.big-scramble:active { transform: translate(-50%, 1px); }
-.big-scramble:disabled { opacity: .6; cursor: progress; filter: none; }
-.big-scramble kbd { background: rgba(255, 255, 255, .2); color: inherit; border-color: rgba(0, 0, 0, .15); font-size: 11px; }
+.big-btn:hover { background: var(--accent); filter: brightness(1.08); }
+.big-btn.alt { background: var(--fg); color: var(--bg); }
+.big-btn.alt:hover { background: var(--fg); }
+.big-btn:disabled { opacity: .6; cursor: progress; filter: none; }
+.big-btn kbd { background: rgba(255, 255, 255, .2); color: inherit; border-color: rgba(0, 0, 0, .15); font-size: 11px; }
+.big-btn.alt kbd { background: transparent; border-color: currentColor; opacity: .7; }
+.hint { color: var(--muted); font-size: 12px; text-align: center; text-wrap: balance; }
 .toast {
-  position: absolute; left: 50%; bottom: 104px; transform: translate(-50%, -8px); opacity: 0;
+  position: absolute; left: 50%; bottom: calc(100% + 8px); transform: translate(-50%, -8px); opacity: 0;
   transition: opacity .25s, transform .25s; pointer-events: none;
   background: var(--fg); color: var(--bg); padding: 10px 16px; border-radius: 10px;
   font-weight: 600; font-size: 14px; white-space: nowrap; font-variant-numeric: tabular-nums;
@@ -129,6 +180,7 @@ button:active { transform: translateY(1px); }
 button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 button.primary { background: var(--accent); color: var(--accent-fg); border-color: transparent; font-weight: 600; }
 button.primary:hover { filter: brightness(1.08); }
+button:disabled { cursor: not-allowed; opacity: .5; }
 
 .actions { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
 .pad { display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px; }
@@ -161,40 +213,78 @@ kbd {
 }
 
 @media (max-width: 760px) {
-  .app { grid-template-columns: minmax(0, 1fr); grid-template-rows: 55% 45%; }
+  .app { grid-template-columns: minmax(0, 1fr); grid-template-rows: 60% 40%; }
   .panel { border-left: 0; border-top: 1px solid var(--line); padding: 16px 16px 24px; }
-  .scramble-bar { top: 56px; padding: 8px 10px; gap: 8px; }
+  .ov-top { padding-top: 12px; gap: 8px; }
+  .scramble-bar { padding: 8px 10px; gap: 8px; }
   .scramble-bar .lbl { display: none; }
   .scramble-moves { font-size: 14px; gap: 0 8px; }
-  .big-scramble { bottom: 36px; font-size: 15px; padding: 12px 18px; }
-  .big-scramble kbd { display: none; }
-  .toast { bottom: 92px; }
+  .big-btn { font-size: 15px; padding: 12px 18px; }
+  .big-btn kbd { display: none; }
+  .hint { display: none; }
+  .ov-bottom { padding-bottom: 10px; }
+  .solution { padding: 10px 12px; gap: 8px; }
+  .sol-steps { max-height: clamp(72px, 16vh, 140px); }
+  .sol-steps .mv { font-size: 13px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .toast, button { transition: none; }
+  .spinner { animation-duration: 2.4s; }
 }
 </style>
 
 <div class="app">
   <div class="stage" id="stage">
     <canvas id="gl" aria-label="3D Rubik's cube. Drag a face to turn it, drag the background to orbit."></canvas>
-    <div class="hud">
-      <div class="chip" id="chip" data-state="solved">Solved</div>
-      <div class="stat"><span>Moves</span><b id="moves">0</b></div>
-      <div class="stat"><span>Time</span><b id="time">0:00.00</b></div>
+    <div class="overlay">
+      <div class="ov-top" id="ov-top">
+        <div class="hud">
+          <div class="chip" id="chip" data-state="solved">Solved</div>
+          <div class="stat"><span>Moves</span><b id="moves">0</b></div>
+          <div class="stat"><span>Time</span><b id="time">0:00.00</b></div>
+        </div>
+        <div class="scramble-bar card" id="scramble-bar" hidden>
+          <span class="lbl">Scramble</span>
+          <div class="scramble-moves" id="scramble-moves"></div>
+          <button type="button" id="btn-copy-scramble" title="Copy scramble to clipboard">Copy</button>
+        </div>
+      </div>
+
+      <div class="ov-bottom" id="ov-bottom">
+        <div class="toast" id="toast" role="status"></div>
+
+        <div class="solution card" id="solution" hidden>
+          <div class="sol-head">
+            <h3>CFOP solution</h3>
+            <span class="sol-sum" id="sol-sum"></span>
+            <button type="button" class="x" id="sol-close" aria-label="Close solution" title="Close">×</button>
+          </div>
+          <p class="sol-msg" id="sol-msg" hidden></p>
+          <div class="sol-colors" id="sol-colors" role="group" aria-label="Cross color"></div>
+          <div class="sol-steps" id="sol-steps"></div>
+          <div class="sol-ctrl" id="sol-ctrl">
+            <button type="button" id="sol-prev" title="Undo one solution move">‹ Back</button>
+            <button type="button" class="primary" id="sol-play">Play</button>
+            <button type="button" id="sol-next" title="Do the next solution move">Step ›</button>
+            <span class="pos" id="sol-pos"></span>
+          </div>
+        </div>
+
+        <div class="cta-row">
+          <button type="button" class="big-btn" id="btn-scramble-big" title="Apply a random 22-move scramble (Space)">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 3h5v5"/><path d="M4 20 21 3"/><path d="M21 16v5h-5"/><path d="m15 15 6 6"/><path d="M4 4l5 5"/></svg>
+            Scramble
+            <kbd>Space</kbd>
+          </button>
+          <button type="button" class="big-btn alt" id="btn-cfop" title="Find a CFOP solution for the current cube (Enter)">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 3 8l9 5 9-5-9-5Z"/><path d="m3 13 9 5 9-5"/></svg>
+            Solve with CFOP
+            <kbd>Enter</kbd>
+          </button>
+        </div>
+        <div class="hint">Drag a face to turn it · drag the background to orbit · scroll or pinch to zoom</div>
+      </div>
     </div>
-    <div class="scramble-bar" id="scramble-bar" hidden>
-      <span class="lbl">Scramble</span>
-      <div class="scramble-moves" id="scramble-moves"></div>
-      <button type="button" id="btn-copy-scramble" title="Copy scramble to clipboard">Copy</button>
-    </div>
-    <div class="toast" id="toast" role="status"></div>
-    <button type="button" class="big-scramble" id="btn-scramble-big" title="Apply a random 22-move scramble (Space)">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 3h5v5"/><path d="M4 20 21 3"/><path d="M21 16v5h-5"/><path d="m15 15 6 6"/><path d="M4 4l5 5"/></svg>
-      Scramble
-      <kbd>Space</kbd>
-    </button>
-    <div class="hint">Drag a face to turn it · drag the background to orbit · scroll or pinch to zoom</div>
   </div>
 
   <aside class="panel">
@@ -207,7 +297,7 @@ kbd {
       <div class="actions">
         <button class="primary" id="btn-scramble" title="Apply a random 22-move scramble">Scramble</button>
         <button id="btn-undo" title="Undo last move (Backspace)">Undo</button>
-        <button id="btn-solve" title="Reverse every move back to the solved state">Solve</button>
+        <button id="btn-rewind" title="Play every move backwards to the solved state">Rewind</button>
         <button id="btn-reset" title="Snap back to solved instantly">Reset</button>
       </div>
     </section>
@@ -250,6 +340,7 @@ kbd {
         <kbd>X</kbd> <kbd>Y</kbd> <kbd>Z</kbd> whole cube ·
         hold <kbd>Shift</kbd> for prime ·
         <kbd>Space</kbd> scramble ·
+        <kbd>Enter</kbd> CFOP solve ·
         <kbd>Backspace</kbd> undo
       </p>
     </section>
@@ -257,6 +348,471 @@ kbd {
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+<script>
+/* ===================================================================================
+   CFOP solver. Self-contained so it can run inside a Web Worker.
+   Model: 54 sticker slots, each a (cubie position, face normal) pair; every move is a
+   permutation of slots derived from geometry. Search state tracks one sticker per piece.
+   Cross: optimal (BFS pruning table). F2L: IDA* per pair, cheapest pair first, with
+   pruning tables that combine the pair with cross edges and with other solved pairs.
+   OLL / PLL: full 1-look tables (57 + 21), tried under every AUF, shortest kept.
+   =================================================================================== */
+function CFOP_FACTORY() {
+  const BASE = {
+    R: [0, [1], -1], L: [0, [-1], 1], M: [0, [0], 1],
+    U: [1, [1], -1], D: [1, [-1], 1], E: [1, [0], 1],
+    F: [2, [1], -1], B: [2, [-1], 1], S: [2, [0], -1],
+    x: [0, [-1, 0, 1], -1], y: [1, [-1, 0, 1], -1], z: [2, [-1, 0, 1], -1],
+    r: [0, [0, 1], -1], l: [0, [-1, 0], 1], u: [1, [0, 1], -1], d: [1, [-1, 0], 1],
+    f: [2, [0, 1], -1], b: [2, [-1, 0], 1],
+  };
+  const OLL = {
+    1: "R U2 R2 F R F' U2 R' F R F'", 2: "F R U R' U' F' f R U R' U' f'",
+    3: "f R U R' U' f' U' F R U R' U' F'", 4: "f R U R' U' f' U F R U R' U' F'",
+    5: "r' U2 R U R' U r", 6: "r U2 R' U' R U' r'", 7: "r U R' U R U2 r'", 8: "r' U' R U' R' U2 r",
+    9: "R U R' U' R' F R2 U R' U' F'", 10: "R U R' U R' F R F' R U2 R'",
+    11: "r U R' U R' F R F' R U2 r'", 12: "M' R' U' R U' R' U2 R U' R r'",
+    13: "F U R U' R2 F' R U R U' R'", 14: "R' F R U R' F' R F U' F'",
+    15: "r' U' r R' U' R U r' U r", 16: "r U r' R U R' U' r U' r'",
+    17: "R U R' U R' F R F' U2 R' F R F'", 18: "r U R' U R U2 r2 U' R U' R' U2 r",
+    19: "r' R U R U R' U' M' R' F R F'", 20: "r U R' U' M2 U R U' R' U' M'",
+    21: "R U2 R' U' R U R' U' R U' R'", 22: "R U2 R2 U' R2 U' R2 U2 R",
+    23: "R2 D' R U2 R' D R U2 R", 24: "r U R' U' r' F R F'", 25: "F' r U R' U' r' F R",
+    26: "R U2 R' U' R U' R'", 27: "R U R' U R U2 R'", 28: "r U R' U' r' R U R U' R'",
+    29: "R U R' U' R U' R' F' U' F R U R'", 30: "F R' F R2 U' R' U' R U R' F2",
+    31: "R' U' F U R U' R' F' R", 32: "L U F' U' L' U L F L'", 33: "R U R' U' R' F R F'",
+    34: "R U R2 U' R' F R U R U' F'", 35: "R U2 R2 F R F' R U2 R'",
+    36: "L' U' L U' L' U L U L F' L' F", 37: "F R' F' R U R U' R'",
+    38: "R U R' U R U' R' U' R' F R F'", 39: "L F' L' U' L U F U' L'", 40: "R' F R U R' U' F' U R",
+    41: "R U R' U R U2 R' F R U R' U' F'", 42: "R' U' R U' R' U2 R F R U R' U' F'",
+    43: "F' U' L' U L F", 44: "F U R U' R' F'", 45: "F R U R' U' F'", 46: "R' U' R' F R F' U R",
+    47: "R' U' R' F R F' R' F R F' U R", 48: "F R U R' U' R U R' U' F'",
+    49: "r U' r2 U r2 U r2 U' r", 50: "r' U r2 U' r2 U' r2 U r'", 51: "F U R U' R' U R U' R' F'",
+    52: "R U R' U R U' B U' B' R'", 53: "r' U' R U' R' U R U' R' U2 r", 54: "r U R' U R U' R' U R U2 r'",
+    55: "R' F R U R U' R2 F' R2 U' R' U R U R'", 56: "r' U' r U' R' U R U' R' U R r' U r",
+    57: "R U R' U' M' U R U' r'",
+  };
+  const OLL_NAMES = { 21: 'H', 22: 'Pi', 23: 'Headlights', 24: 'Chameleon', 25: 'Bowtie', 26: 'Antisune', 27: 'Sune', 45: 'T', 44: 'P', 33: 'T', 57: 'H dots' };
+  const PLL = {
+    Aa: "x R' U R' D2 R U' R' D2 R2 x'", Ab: "x R2 D2 R U R' D2 R U' R x'",
+    E: "x' R U' R' D R U R' D' R U R' D R U' R' D' x",
+    F: "R' U' F' R U R' U' R' F R2 U' R' U' R U R' U R",
+    Ga: "R2 U R' U R' U' R U' R2 U' D R' U R D'", Gb: "R' U' R U D' R2 U R' U R U' R U' R2 D",
+    Gc: "R2 U' R U' R U R' U R2 U D' R U' R' D", Gd: "R U R' U' D R2 U' R U' R' U R' U R2 D'",
+    H: "M2 U M2 U2 M2 U M2", Ja: "x R2 F R F' R U2 r' U r U2 x'", Jb: "R U R' F' R U R' U' R' F R2 U' R'",
+    Na: "R U R' U R U R' F' R U R' U' R' F R2 U' R' U2 R U' R'",
+    Nb: "R' U R U' R' F' U' F R U R' F R' F' R U' R",
+    Ra: "R U' R' U' R U R D R' U' R D' R' U2 R'", Rb: "R2 F R U R U' R' F' R U2 R' U2 R",
+    T: "R U R' U' R' F R2 U' R' U' R U R' F'", Ua: "M2 U M U2 M' U M2", Ub: "M2 U' M U2 M' U' M2",
+    V: "R U' R U R' D R D' R U' D R2 U R2 D' R2", Y: "F R U' R' U' R U R' F' R U R' U' R' F R F'",
+    Z: "M' U M2 U M2 U M' U2 M2",
+  };
+  const COLOR_NAMES = { U: 'White', D: 'Yellow', F: 'Green', B: 'Blue', R: 'Red', L: 'Orange' };
+
+  // ---- geometry ----
+  function rot(v, axis, q) {
+    let [x, y, z] = v;
+    for (let i = 0; i < q; i++) {
+      if (axis === 0) [y, z] = [-z, y];
+      else if (axis === 1) [x, z] = [z, -x];
+      else [x, y] = [-y, x];
+    }
+    return [x, y, z];
+  }
+  const K = (p, n) => p.join(',') + '|' + n.join(',');
+  const PK = p => p.join(',');
+  const SLOTS = [], IDX = new Map(), CUBIE = new Map();
+  for (let x = -1; x <= 1; x++) for (let y = -1; y <= 1; y++) for (let z = -1; z <= 1; z++) {
+    const p = [x, y, z];
+    for (let a = 0; a < 3; a++) for (const s of [1, -1]) {
+      if (p[a] !== s) continue;
+      const n = [0, 0, 0]; n[a] = s;
+      IDX.set(K(p, n), SLOTS.length);
+      if (!CUBIE.has(PK(p))) CUBIE.set(PK(p), []);
+      CUBIE.get(PK(p)).push(SLOTS.length);
+      SLOTS.push({ p, n });
+    }
+  }
+  const slotOf = (p, n) => IDX.get(K(p, n));
+
+  const PERMS = new Map();
+  function perm(tok) {
+    if (PERMS.has(tok)) return PERMS.get(tok);
+    const m = /^([RLUDFBMESxyzrludfb])(w?)(2|')?$/.exec(tok);
+    if (!m) throw new Error('Bad move ' + tok);
+    const [axis, layers, dir] = BASE[m[2] ? m[1].toLowerCase() : m[1]];
+    const turns = m[3] === '2' ? 2 : m[3] === "'" ? -1 : 1;
+    const q = (((dir * turns) % 4) + 4) % 4;
+    const P = new Int16Array(54);
+    SLOTS.forEach((s, i) => {
+      P[i] = layers.includes(s.p[axis]) ? IDX.get(K(rot(s.p, axis, q), rot(s.n, axis, q))) : i;
+    });
+    PERMS.set(tok, P);
+    return P;
+  }
+  const split = s => s.trim().split(/\s+/).filter(Boolean);
+  function applyAlg(colors, toks) {
+    for (const t of toks) {
+      const P = perm(t), out = new Array(54);
+      for (let i = 0; i < 54; i++) out[P[i]] = colors[i];
+      colors = out;
+    }
+    return colors;
+  }
+  const CENTER = {};
+  SLOTS.forEach((s, i) => { if (s.p.every((v, j) => v === s.n[j])) CENTER[PK(s.n)] = i; });
+  function isSolved(c) {
+    for (let i = 0; i < 54; i++) if (c[i] !== c[CENTER[PK(SLOTS[i].n)]]) return false;
+    return true;
+  }
+  const TOP = SLOTS.map((s, i) => i).filter(i => SLOTS[i].n[1] === 1);
+  function isOriented(c) {
+    const t = c[CENTER['0,1,0']];
+    for (const i of TOP) if (c[i] !== t) return false;
+    return true;
+  }
+
+  // ---- piece tracking ----
+  const FACE_MOVES = [];
+  for (const f of ['U', 'D', 'R', 'L', 'F', 'B']) for (const s of ['', '2', "'"]) FACE_MOVES.push(f + s);
+  const ALL18 = FACE_MOVES.map((_, i) => i);
+  const NO_D = ALL18.filter(m => ((m / 3) | 0) !== 1);
+
+  const eIdx = new Int8Array(54).fill(-1), cIdx = new Int8Array(54).fill(-1);
+  const edgeSlots = [], cornerSlots = [];
+  SLOTS.forEach((s, i) => {
+    const nz = s.p.filter(v => v !== 0).length;
+    if (nz === 2) { eIdx[i] = edgeSlots.length; edgeSlots.push(i); }
+    if (nz === 3) { cIdx[i] = cornerSlots.length; cornerSlots.push(i); }
+  });
+  const EMT = new Int8Array(18 * 24), CMT = new Int8Array(18 * 24);
+  for (let m = 0; m < 18; m++) {
+    const P = perm(FACE_MOVES[m]);
+    for (let i = 0; i < 24; i++) {
+      EMT[m * 24 + i] = eIdx[P[edgeSlots[i]]];
+      CMT[m * 24 + i] = cIdx[P[cornerSlots[i]]];
+    }
+  }
+
+  const DOWN = [0, -1, 0];
+  const CROSS_POS = [[0, -1, 1], [1, -1, 0], [0, -1, -1], [-1, -1, 0]];
+  const PAIRS = [
+    { name: 'front-right', c: [1, -1, 1], e: [1, 0, 1] },
+    { name: 'front-left', c: [-1, -1, 1], e: [-1, 0, 1] },
+    { name: 'back-left', c: [-1, -1, -1], e: [-1, 0, -1] },
+    { name: 'back-right', c: [1, -1, -1], e: [1, 0, -1] },
+  ];
+  // 12 tracked stickers: 4 cross edges, then (corner, edge) for each F2L slot
+  const REF_SLOT = [], IS_C = [];
+  for (const p of CROSS_POS) { REF_SLOT.push(slotOf(p, DOWN)); IS_C.push(0); }
+  for (const pr of PAIRS) {
+    REF_SLOT.push(slotOf(pr.c, DOWN)); IS_C.push(1);
+    REF_SLOT.push(slotOf(pr.e, [Math.sign(pr.e[0]), 0, 0])); IS_C.push(0);
+  }
+  const HOME = REF_SLOT.map((s, i) => IS_C[i] ? cIdx[s] : eIdx[s]);
+  const MT = IS_C.map(c => c ? CMT : EMT);
+
+  function refsFromColors(colors) {
+    const c2n = {};
+    for (const key in CENTER) c2n[colors[CENTER[key]]] = key.split(',').map(Number);
+    const loc = new Int16Array(54).fill(-1);
+    SLOTS.forEach((s, i) => {
+      const group = CUBIE.get(PK(s.p));
+      if (group.length === 1) return;
+      const hp = [0, 0, 0];
+      for (const t of group) { const nn = c2n[colors[t]]; hp[0] += nn[0]; hp[1] += nn[1]; hp[2] += nn[2]; }
+      const hs = IDX.get(K(hp, c2n[colors[i]]));
+      if (hs === undefined) throw new Error('This cube state is not valid.');
+      loc[hs] = i;
+    });
+    return Int8Array.from(REF_SLOT.map((rs, i) => IS_C[i] ? cIdx[loc[rs]] : eIdx[loc[rs]]));
+  }
+
+  // ---- pruning tables ----
+  const TABLES = new Map();
+  function table(refs, moves) {
+    const key = refs.join(',') + '/' + moves.length;
+    if (TABLES.has(key)) return TABLES.get(key);
+    const n = refs.length, size = 24 ** n;
+    const T = new Uint8Array(size).fill(255);
+    const mts = refs.map(r => MT[r]);
+    let start = 0;
+    for (const r of refs) start = start * 24 + HOME[r];
+    const q = new Int32Array(size);
+    let head = 0, tail = 0;
+    T[start] = 0; q[tail++] = start;
+    const dig = new Int32Array(n);
+    while (head < tail) {
+      const s = q[head++], d = T[s] + 1;
+      let t = s;
+      for (let i = n - 1; i >= 0; i--) { dig[i] = t % 24; t = (t / 24) | 0; }
+      for (const m of moves) {
+        const o = m * 24;
+        let ns = 0;
+        for (let i = 0; i < n; i++) ns = ns * 24 + mts[i][o + dig[i]];
+        if (T[ns] === 255) { T[ns] = d; q[tail++] = ns; }
+      }
+    }
+    TABLES.set(key, T);
+    return T;
+  }
+  const idx4 = (st, a, b, c, d) => ((st[a] * 24 + st[b]) * 24 + st[c]) * 24 + st[d];
+  let CROSS_T = null;
+  const PC = [[], [], [], []];         // pair k with cross edges (0,1) and (2,3)
+  const PP = {};                       // pair j with pair k
+  function prepare(progress) {
+    if (CROSS_T) return;
+    progress && progress({ phase: 'tables' });
+    CROSS_T = table([0, 1, 2, 3], ALL18);
+    for (let k = 0; k < 4; k++) {
+      const c = 4 + 2 * k, e = 5 + 2 * k;
+      PC[k] = [table([c, e, 0, 1], NO_D), table([c, e, 2, 3], NO_D)];
+    }
+    for (let j = 0; j < 4; j++) for (let k = j + 1; k < 4; k++) {
+      PP[j * 4 + k] = table([4 + 2 * j, 5 + 2 * j, 4 + 2 * k, 5 + 2 * k], NO_D);
+    }
+  }
+
+  function step(st, m, out) {
+    const o = m * 24;
+    for (let i = 0; i < 12; i++) out[i] = MT[i][o + st[i]];
+    return out;
+  }
+
+  // ---- cross: every optimal cross, by walking down the distance table ----
+  function allCrosses(st0, limit) {
+    const out = [];
+    const path = [];
+    (function walk(st, last) {
+      if (out.length >= limit) return;
+      const d = CROSS_T[idx4(st, 0, 1, 2, 3)];
+      if (d === 0) { out.push({ path: path.slice(), st: Int8Array.from(st) }); return; }
+      for (const m of ALL18) {
+        const f = (m / 3) | 0;
+        if (f === last || ((f ^ 1) === last && f < last)) continue;
+        const nx = step(st, m, new Int8Array(12));
+        if (CROSS_T[idx4(nx, 0, 1, 2, 3)] !== d - 1) continue;
+        path.push(m);
+        walk(nx, f);
+        path.pop();
+      }
+    })(Int8Array.from(st0), -1);
+    return out;
+  }
+
+  // ---- F2L: IDA* for one pair, preserving cross and solved pairs ----
+  const MAXD = 16;
+  const STACK = Array.from({ length: MAXD + 2 }, () => new Int8Array(12));
+  const PATH = new Int8Array(MAXD + 2);
+  let nodes = 0;
+  function pairHome(st, k) { return st[4 + 2 * k] === HOME[4 + 2 * k] && st[5 + 2 * k] === HOME[5 + 2 * k]; }
+  function heuristic(st, k, solved) {
+    const ck = 4 + 2 * k, ek = 5 + 2 * k;
+    let h = CROSS_T[idx4(st, 0, 1, 2, 3)];
+    let v = PC[k][0][idx4(st, ck, ek, 0, 1)]; if (v > h) h = v;
+    v = PC[k][1][idx4(st, ck, ek, 2, 3)]; if (v > h) h = v;
+    for (const j of solved) {
+      const cj = 4 + 2 * j, ej = 5 + 2 * j;
+      v = PC[j][0][idx4(st, cj, ej, 0, 1)]; if (v > h) h = v;
+      v = PC[j][1][idx4(st, cj, ej, 2, 3)]; if (v > h) h = v;
+      v = j < k ? PP[j * 4 + k][idx4(st, cj, ej, ck, ek)] : PP[k * 4 + j][idx4(st, ck, ek, cj, ej)];
+      if (v > h) h = v;
+    }
+    return h;
+  }
+  function dfs(depth, bound, last, k, solved) {
+    nodes++;
+    const cur = STACK[depth];
+    const h = heuristic(cur, k, solved);
+    if (h === 0) return depth;
+    if (depth + h > bound) return -1;
+    const next = STACK[depth + 1];
+    for (const m of NO_D) {
+      const f = (m / 3) | 0;
+      if (f === last || ((f ^ 1) === last && f < last)) continue;
+      step(cur, m, next);
+      PATH[depth] = m;
+      const r = dfs(depth + 1, bound, f, k, solved);
+      if (r >= 0) return r;
+    }
+    return -1;
+  }
+  function shortestPair(st, k, solved) {
+    for (let bound = 0; bound <= MAXD; bound++) {
+      STACK[0].set(st);
+      const len = dfs(0, bound, -1, k, solved);
+      if (len >= 0) return Array.from(PATH.slice(0, len));
+    }
+    throw new Error('F2L search gave up');
+  }
+  // Every order of the remaining pairs, each pair inserted by its shortest solution
+  function allF2L(st0) {
+    const out = [];
+    const acc = [];
+    (function rec(st, solved) {
+      if (solved.length === 4) {
+        out.push({ steps: acc.slice(), len: acc.reduce((n, s) => n + s.path.length, 0), st });
+        return;
+      }
+      for (let k = 0; k < 4; k++) {
+        if (solved.includes(k)) continue;
+        const path = shortestPair(st, k, solved);
+        const nx = Int8Array.from(st), tmp = new Int8Array(12);
+        for (const m of path) { step(nx, m, tmp); nx.set(tmp); }
+        const now = [0, 1, 2, 3].filter(j => pairHome(nx, j));   // pairs that happen to drop in too
+        acc.push({ slot: k, path });
+        rec(nx, now);
+        acc.pop();
+      }
+    })(Int8Array.from(st0), [0, 1, 2, 3].filter(k => pairHome(st0, k)));
+    return out;
+  }
+
+  // ---- last layer ----
+  const AUF = ['', 'U', 'U2', "U'"];
+  const OLL_LIST = Object.entries(OLL).map(([n, a]) => [Number(n), split(a)]);
+  const PLL_LIST = [['', []], ...Object.entries(PLL).map(([n, a]) => [n, split(a)])];
+  // Every OLL (with its AUF) that orients the last layer
+  function ollOptions(c) {
+    if (isOriented(c)) return [{ num: 0, moves: [], c }];
+    const out = [];
+    for (const pre of AUF) {
+      const pc = pre ? applyAlg(c, [pre]) : c;
+      for (const [num, toks] of OLL_LIST) {
+        const ac = applyAlg(pc, toks);
+        if (isOriented(ac)) out.push({ num, moves: pre ? [pre, ...toks] : toks, c: ac });
+      }
+    }
+    if (!out.length) throw new Error('No OLL case matched');
+    return out;
+  }
+  // Pick the OLL + PLL pair with the fewest moves in total
+  function solveLL(c) {
+    let best = null;
+    for (const o of ollOptions(c)) {
+      if (best && o.moves.length >= best.len) continue;
+      const p = solvePLL(o.c);
+      const len = o.moves.length + p.moves.length;
+      if (!best || len < best.len) best = { len, oll: o, pll: p };
+    }
+    return best;
+  }
+  function solvePLL(c) {
+    let best = null;
+    for (const pre of AUF) {
+      const pc = pre ? applyAlg(c, [pre]) : c;
+      for (const [name, toks] of PLL_LIST) {
+        if (!name && pre) continue;
+        const ac = applyAlg(pc, toks);
+        for (const post of AUF) {
+          const len = toks.length + (pre ? 1 : 0) + (post ? 1 : 0);
+          if (best && len >= best.len) continue;
+          if (isSolved(post ? applyAlg(ac, [post]) : ac)) {
+            best = { name, len, moves: [...(pre ? [pre] : []), ...toks, ...(post ? [post] : [])] };
+          }
+        }
+      }
+    }
+    if (!best) throw new Error('No PLL case matched');
+    return best;
+  }
+
+  // ---- stitching ----
+  const FACE_TOK = /^[UDRLFB](2|')?$/;
+  const amt = t => t.length === 1 ? 1 : t[1] === '2' ? 2 : 3;
+  function mergeStages(stages) {
+    const out = [];
+    stages.forEach((s, si) => s.moves.forEach(m => {
+      const top = out[out.length - 1];
+      if (top && FACE_TOK.test(m) && FACE_TOK.test(top.m) && top.m[0] === m[0]) {
+        const a = (amt(top.m) + amt(m)) % 4;
+        if (a === 0) out.pop(); else top.m = top.m[0] + ['', '', '2', "'"][a];
+      } else out.push({ m, si });
+    }));
+    return stages.map((s, si) => ({ ...s, moves: out.filter(o => o.si === si).map(o => o.m) }));
+  }
+  const countMoves = toks => toks.filter(t => !/^[xyz]/.test(t)).length;
+
+  function solveFrom(colors, rotation) {
+    const rc = rotation ? applyAlg(colors, [rotation]) : colors;
+    const crossColor = rc[CENTER['0,-1,0']];
+    const st0 = refsFromColors(rc);
+
+    // Candidate first-two-layers: every optimal cross x every pair order
+    const cands = [];
+    for (const cross of allCrosses(st0, CROSS_LIMIT)) {
+      for (const f of allF2L(cross.st)) cands.push({ cross, f2l: f, len: cross.path.length + f.len });
+    }
+    cands.sort((a, b) => a.len - b.len);
+    const minLen = cands[0].len;
+    const shortlist = cands.filter(x => x.len <= minLen + 2).slice(0, LL_TRIES);
+
+    let best = null;
+    for (const cand of shortlist) {
+      const stages = [];
+      if (rotation) stages.push({ kind: 'rot', label: 'Hold', note: `${COLOR_NAMES[crossColor]} on bottom`, moves: [rotation] });
+      stages.push({ kind: 'cross', label: 'Cross', moves: cand.cross.path.map(m => FACE_MOVES[m]) });
+      cand.f2l.steps.forEach((p, i) => {
+        stages.push({ kind: 'f2l', label: `F2L ${i + 1}`, note: PAIRS[p.slot].name, moves: p.path.map(m => FACE_MOVES[m]) });
+      });
+      // pairs that were already in place, or dropped in while solving another pair
+      for (let k = 0, n = cand.f2l.steps.length; k < 4; k++) {
+        if (cand.f2l.steps.some(p => p.slot === k)) continue;
+        stages.push({ kind: 'f2l', label: `F2L ${++n}`, note: PAIRS[k].name, moves: [] });
+      }
+      const c = applyAlg(rc, stages.filter(s => s.kind !== 'rot').flatMap(s => s.moves));
+      const ll = solveLL(c);
+      const { oll, pll } = ll;
+      stages.push({ kind: 'oll', label: oll.num ? `OLL ${oll.num}` : 'OLL', note: oll.num ? (OLL_NAMES[oll.num] || '') : 'skip', moves: oll.moves });
+      stages.push({ kind: 'pll', label: pll.name ? 'PLL' : 'AUF', note: pll.name ? `${pll.name}-perm` : (pll.moves.length ? '' : 'skip'), moves: pll.moves });
+      const merged = mergeStages(stages);
+      const all = merged.flatMap(s => s.moves);
+      const total = countMoves(all);
+      if (!best || total < best.total) best = { merged, all, total };
+    }
+    if (!isSolved(applyAlg(colors, best.all))) throw new Error('Internal check failed');
+    return { color: crossColor, colorName: COLOR_NAMES[crossColor], stages: best.merged, total: best.total };
+  }
+  const CROSS_LIMIT = 6, LL_TRIES = 12;
+
+  function solveAll(stickers, progress) {
+    const colors = new Array(54);
+    for (const s of stickers) {
+      const n = [0, 0, 0]; n[s.axis] = s.sign;
+      colors[slotOf(s.p, n)] = s.color;
+    }
+    if (colors.some(c => c === undefined)) throw new Error('Could not read the cube');
+    if (isSolved(colors)) return { solved: true, results: [] };
+    prepare(progress);
+    const rotations = ['', 'x2', 'x', "x'", 'z', "z'"];
+    const results = [];
+    rotations.forEach((r, i) => {
+      progress && progress({ phase: 'color', done: i, total: rotations.length });
+      nodes = 0;
+      const res = solveFrom(colors, r);
+      res.nodes = nodes;
+      results.push(res);
+    });
+    results.sort((a, b) => a.total - b.total);
+    return { solved: false, results };
+  }
+
+  // Solve a scramble given in notation, starting from a solved cube (used for self-tests)
+  function solveScramble(alg) {
+    const FACE = { '1,0,0': 'R', '-1,0,0': 'L', '0,1,0': 'U', '0,-1,0': 'D', '0,0,1': 'F', '0,0,-1': 'B' };
+    const colors = applyAlg(SLOTS.map(s => FACE[PK(s.n)]), split(alg));
+    const stickers = SLOTS.map((s, i) => {
+      const axis = s.n.findIndex(v => v !== 0);
+      return { p: s.p, axis, sign: s.n[axis], color: colors[i] };
+    });
+    return solveAll(stickers);
+  }
+
+  return { solveAll, solveScramble };
+}
+</script>
+
 <script>
 (() => {
   // ---------- constants ----------
@@ -294,6 +850,10 @@ kbd {
     const turns = suffix === '2' ? 2 : suffix === "'" ? -1 : 1;
     return { name: label || key + suffix, axis: b.axis, layers: b.layers, angle: b.dir * turns * Q };
   }
+  function moveFromToken(tok) {
+    const m = /^([RLUDFBMESxyzrludfb])(w?)(2|')?$/.exec(tok);
+    return makeMove(m[2] ? m[1].toLowerCase() : m[1], m[3] || '', tok);
+  }
   function inverse(m) {
     const name = m.name.endsWith("'") ? m.name.slice(0, -1) : m.name.endsWith('2') ? m.name : m.name + "'";
     return { name, axis: m.axis, layers: m.layers, angle: -m.angle };
@@ -319,6 +879,8 @@ kbd {
   // ---------- three.js scene ----------
   const stageEl = document.getElementById('stage');
   const canvas = document.getElementById('gl');
+  const ovTop = document.getElementById('ov-top');
+  const ovBottom = document.getElementById('ov-bottom');
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
   renderer.setClearColor(0x000000, 0);
@@ -425,22 +987,41 @@ kbd {
   }
 
   // ---------- camera ----------
+  // The cube is framed inside the space left between the top and bottom overlay bands.
   let theta = 0.62, phi = 0.98, zoom = 1;
+  let stageW = 1, stageH = 1;
+  const reserve = { top: 0, bottom: 0 };
   function updateCamera() {
+    const w = stageW, h = stageH;
+    let top = reserve.top, bot = reserve.bottom;
+    let avail = h - top - bot;
+    const minAvail = h * 0.5;
+    if (avail < minAvail) {
+      const k = (h - minAvail) / Math.max(1, top + bot);
+      top *= k; bot *= k; avail = minAvail;
+    }
+    camera.aspect = w / avail;
+    camera.setViewOffset(w, avail, 0, -top, w, h);
     const vfov = camera.fov * Math.PI / 180;
     const hfov = 2 * Math.atan(Math.tan(vfov / 2) * camera.aspect);
-    const dist = 3.3 / Math.sin(Math.min(vfov, hfov) / 2) * zoom;
+    const dist = 3.1 / Math.sin(Math.min(vfov, hfov) / 2) * zoom;
     camera.position.setFromSphericalCoords(dist, phi, theta);
     camera.lookAt(0, 0, 0);
+    camera.updateProjectionMatrix();
   }
   function resize() {
     const w = stageEl.clientWidth, h = stageEl.clientHeight;
     if (!w || !h) return;
+    stageW = w; stageH = h;
     renderer.setSize(w, h, false);
-    camera.aspect = w / h;
-    camera.updateProjectionMatrix();
+  }
+  function measureBands() {
+    reserve.top = ovTop.offsetHeight;
+    reserve.bottom = ovBottom.offsetHeight;
   }
   new ResizeObserver(resize).observe(stageEl);
+  const bandObserver = new ResizeObserver(measureBands);
+  bandObserver.observe(ovTop); bandObserver.observe(ovBottom);
 
   // ---------- move engine ----------
   const queue = [];
@@ -491,10 +1072,16 @@ kbd {
       }
       if (solved && phase === 'inspect') phase = 'free';
       refresh(solved);
+      if (done.kind === 'cfop' && solved && sol && sol.pos === sol.flat.length) {
+        toast(`Solved with CFOP · ${sol.result.total} moves`);
+      }
     }
+    if (done.kind === 'cfop' || done.kind === 'cfop-back') onSolutionMoveDone();
+    if (solveWhenIdle && !queue.length && !anim) requestSolve();
   }
 
   function recordUser(move) {
+    invalidateSolution();
     history.push({ move, kind: 'user' });
     moveCount++;
     if (phase === 'inspect') { phase = 'timing'; t0 = performance.now(); }
@@ -505,6 +1092,7 @@ kbd {
 
   function scramble() {
     if (drag.mode === 'turn' || phase === 'scrambling') return;
+    invalidateSolution();
     const faces = ['R', 'L', 'U', 'D', 'F', 'B'], sufs = ['', "'", '2'];
     let lastAxis = -1;
     const names = [];
@@ -525,20 +1113,23 @@ kbd {
   }
   function undo() {
     if (drag.mode === 'turn' || !history.length) return;
+    invalidateSolution();
     const h = history.pop();
     enqueue(inverse(h.move), 'undo');
     renderHistory(); setChip('turning');
   }
-  function solve() {
+  function rewind() {
     if (drag.mode === 'turn' || !history.length) return;
+    invalidateSolution();
     const inv = history.slice().reverse().map(h => inverse(h.move));
     history = [];
     const factor = inv.length > 30 ? 0.35 : 0.6;
-    for (const m of inv) enqueue(m, 'solve', factor);
+    for (const m of inv) enqueue(m, 'rewind', factor);
     phase = 'free';
     renderHistory(); setChip('turning');
   }
   function reset() {
+    invalidateSolution();
     queue.length = 0; anim = null; drag.mode = null;
     canvas.classList.remove('dragging');
     build();
@@ -575,6 +1166,205 @@ kbd {
     };
     try { navigator.clipboard.writeText(scrambleText).then(done, fallback); } catch (_) { fallback(); }
   });
+
+  // ---------- CFOP solution ----------
+  const solEl = document.getElementById('solution');
+  const solMsg = document.getElementById('sol-msg');
+  const solSum = document.getElementById('sol-sum');
+  const solColors = document.getElementById('sol-colors');
+  const solSteps = document.getElementById('sol-steps');
+  const solCtrl = document.getElementById('sol-ctrl');
+  const solPrev = document.getElementById('sol-prev');
+  const solPlay = document.getElementById('sol-play');
+  const solNext = document.getElementById('sol-next');
+  const solPos = document.getElementById('sol-pos');
+  const cfopBtn = document.getElementById('btn-cfop');
+
+  let sol = null;          // { results, active, result, flat: [{tok, stage}], pos, playing }
+  let cubeVersion = 0;
+  let pendingId = 0;
+  let worker;              // undefined = not tried, null = unavailable
+
+  function getWorker() {
+    if (worker !== undefined) return worker;
+    try {
+      const src = `const api = (${CFOP_FACTORY.toString()})();
+        self.onmessage = e => {
+          const id = e.data.id;
+          try {
+            const res = api.solveAll(e.data.stickers, p => self.postMessage({ type: 'progress', id, p }));
+            self.postMessage({ type: 'result', id, res });
+          } catch (err) { self.postMessage({ type: 'error', id, message: String(err && err.message || err) }); }
+        };`;
+      worker = new Worker(URL.createObjectURL(new Blob([src], { type: 'text/javascript' })));
+      worker.onmessage = e => onSolverMessage(e.data);
+      worker.onerror = () => { worker = null; };
+    } catch (_) { worker = null; }
+    return worker;
+  }
+  let localApi = null;
+  function solveLocally(id, data) {
+    setTimeout(() => {
+      try {
+        localApi = localApi || CFOP_FACTORY();
+        const res = localApi.solveAll(data, () => {});
+        onSolverMessage({ type: 'result', id, res });
+      } catch (err) { onSolverMessage({ type: 'error', id, message: String(err && err.message || err) }); }
+    }, 30);
+  }
+
+  let solveWhenIdle = false;
+  function requestSolve() {
+    if (sol && sol.playing) return;
+    if (busy() || phase === 'scrambling') {
+      // Solve as soon as the current turns finish
+      solveWhenIdle = true;
+      sol = null;
+      showSolMessage('Waiting for the cube to stop turning…', true);
+      cfopBtn.disabled = true;
+      return;
+    }
+    solveWhenIdle = false;
+    const id = ++pendingId;
+    sol = null;
+    showSolMessage('Reading the cube…', true);
+    cfopBtn.disabled = true;
+    const data = stickers();
+    const w = getWorker();
+    if (w) w.postMessage({ id, stickers: data }); else solveLocally(id, data);
+    requestSolve.version = cubeVersion;
+  }
+  function onSolverMessage(msg) {
+    if (msg.id !== pendingId) return;
+    if (msg.type === 'progress') {
+      const p = msg.p;
+      if (p.phase === 'tables') showSolMessage('Building search tables (first time only)…', true);
+      else showSolMessage(`Searching cross colors · ${p.done + 1} of ${p.total}…`, true);
+      return;
+    }
+    cfopBtn.disabled = false;
+    if (requestSolve.version !== cubeVersion) { closeSolution(); return; }
+    if (msg.type === 'error') { showSolMessage(`Could not solve: ${msg.message}`, false); return; }
+    if (msg.res.solved) { showSolMessage('The cube is already solved. Scramble it first.', false); return; }
+    sol = { results: msg.res.results, active: 0, pos: 0, playing: false };
+    selectResult(0);
+  }
+  function showSolMessage(text, spinning) {
+    solEl.hidden = false;
+    solMsg.hidden = false;
+    solMsg.innerHTML = (spinning ? '<span class="spinner" aria-hidden="true"></span>' : '') + `<span>${text}</span>`;
+    solSum.textContent = '';
+    solColors.hidden = true; solSteps.hidden = true; solCtrl.hidden = true;
+  }
+  function selectResult(i) {
+    sol.active = i;
+    sol.result = sol.results[i];
+    sol.flat = [];
+    sol.result.stages.forEach((s, si) => s.moves.forEach(tok => sol.flat.push({ tok, stage: si })));
+    sol.pos = 0;
+    renderSolution();
+  }
+  function renderSolution() {
+    const r = sol.result;
+    solMsg.hidden = true;
+    solColors.hidden = false; solSteps.hidden = false; solCtrl.hidden = false;
+    solSum.textContent = `${r.total} moves · ${r.colorName.toLowerCase()} cross`;
+    const bestTotal = sol.results[0].total;
+    solColors.innerHTML = sol.results.map((x, i) =>
+      `<button type="button" data-i="${i}" aria-pressed="${i === sol.active}" ${sol.pos > 0 ? 'disabled' : ''} title="${x.colorName} cross: ${x.total} moves">
+        <span class="dot" style="background:${COLORS[x.color]}"></span>${x.total}${x.total === bestTotal && i === 0 ? ' <span class="best">best</span>' : ''}
+      </button>`).join('');
+    let gi = 0;
+    solSteps.innerHTML = r.stages.map((s, si) => {
+      const label = `<div class="st" data-stage="${si}">${s.label}${s.note ? ` <small>${s.note}</small>` : ''}</div>`;
+      const moves = s.moves.length
+        ? s.moves.map(tok => `<span data-g="${gi++}">${tok}</span>`).join('')
+        : `<em>${s.kind === 'f2l' ? 'already solved, nothing to do' : 'skip, already done'}</em>`;
+      return label + `<div class="mv">${moves}</div>`;
+    }).join('');
+    updateSolutionProgress();
+  }
+  function updateSolutionProgress() {
+    if (!sol || !sol.flat) return;
+    const pos = sol.pos, n = sol.flat.length;
+    solSteps.querySelectorAll('span[data-g]').forEach(el => {
+      const g = Number(el.dataset.g);
+      el.classList.toggle('done', g < pos);
+      el.classList.toggle('next', g === pos);
+    });
+    const curStage = pos < n ? sol.flat[pos].stage : -1;
+    solSteps.querySelectorAll('.st').forEach(el => el.classList.toggle('cur', Number(el.dataset.stage) === curStage));
+    const nextEl = solSteps.querySelector('span.next');
+    if (nextEl && nextEl.scrollIntoView) nextEl.scrollIntoView({ block: 'nearest' });
+    solPos.textContent = `${pos} / ${n}`;
+    solPrev.disabled = pos === 0;
+    solNext.disabled = pos >= n;
+    solPlay.disabled = pos >= n;
+    solPlay.textContent = sol.playing ? 'Pause' : pos >= n ? 'Done' : pos > 0 ? 'Resume' : 'Play';
+    solColors.querySelectorAll('button').forEach(b => (b.disabled = pos > 0));
+  }
+  function solutionStep() {
+    if (!sol || !sol.flat || busy() || sol.pos >= sol.flat.length) return false;
+    if (phase === 'inspect' || phase === 'timing') phase = 'free';
+    const m = moveFromToken(sol.flat[sol.pos].tok);
+    sol.pos++;
+    history.push({ move: m, kind: 'cfop' });
+    renderHistory();
+    enqueue(m, 'cfop');
+    setChip('turning');
+    updateSolutionProgress();
+    return true;
+  }
+  function solutionBack() {
+    if (!sol || !sol.flat || busy() || sol.pos === 0) return;
+    sol.playing = false;
+    sol.pos--;
+    const m = moveFromToken(sol.flat[sol.pos].tok);
+    const last = history[history.length - 1];
+    if (last && last.kind === 'cfop') history.pop();
+    renderHistory();
+    enqueue(inverse(m), 'cfop-back');
+    setChip('turning');
+    updateSolutionProgress();
+  }
+  function onSolutionMoveDone() {
+    if (!sol || !sol.flat) return;
+    if (sol.playing && sol.pos < sol.flat.length) {
+      solutionStep();
+    } else {
+      sol.playing = false;
+      updateSolutionProgress();
+    }
+  }
+  function invalidateSolution() {
+    cubeVersion++;
+    if (solEl.hidden) return;
+    closeSolution();
+  }
+  function closeSolution() {
+    if (sol) sol.playing = false;
+    solveWhenIdle = false;
+    sol = null;
+    pendingId++;
+    cfopBtn.disabled = false;
+    solEl.hidden = true;
+  }
+
+  solPlay.addEventListener('click', () => {
+    if (!sol || !sol.flat) return;
+    if (sol.playing) { sol.playing = false; updateSolutionProgress(); return; }
+    sol.playing = true;
+    if (!solutionStep()) { /* a move is still animating; the next one follows when it lands */ }
+    updateSolutionProgress();
+  });
+  solNext.addEventListener('click', () => { if (sol) { sol.playing = false; solutionStep(); updateSolutionProgress(); } });
+  solPrev.addEventListener('click', solutionBack);
+  document.getElementById('sol-close').addEventListener('click', closeSolution);
+  solColors.addEventListener('click', e => {
+    const b = e.target.closest('button[data-i]');
+    if (b && sol && sol.pos === 0) selectResult(Number(b.dataset.i));
+  });
+  cfopBtn.addEventListener('click', requestSolve);
 
   // ---------- pointer interaction ----------
   const raycaster = new THREE.Raycaster();
@@ -748,7 +1538,6 @@ kbd {
     const ox = (w - cell * 12) / 2;
     const BLOCK = { U: [1, 0], L: [0, 1], F: [1, 1], R: [2, 1], B: [3, 1], D: [1, 2] };
     const FACE_AT = { '0:1': 'R', '0:-1': 'L', '1:1': 'U', '1:-1': 'D', '2:1': 'F', '2:-1': 'B' };
-    // backing tiles for each face
     ctx.fillStyle = '#15171c';
     for (const k in BLOCK) {
       const [bx, by] = BLOCK[k];
@@ -772,7 +1561,6 @@ kbd {
       roundRect(ctx, ox + (bx * 3 + col) * cell + pad, (by * 3 + row) * cell + pad, cell - pad * 2, cell - pad * 2, cell * 0.14);
       ctx.fill();
     }
-    // face letters on centers
     ctx.font = `600 ${Math.round(cell * 0.38)}px "IBM Plex Mono", ui-monospace, monospace`;
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.fillStyle = 'rgba(0,0,0,.45)';
@@ -813,7 +1601,7 @@ kbd {
   document.getElementById('btn-scramble').addEventListener('click', scramble);
   bigScrambleBtn.addEventListener('click', scramble);
   document.getElementById('btn-undo').addEventListener('click', undo);
-  document.getElementById('btn-solve').addEventListener('click', solve);
+  document.getElementById('btn-rewind').addEventListener('click', rewind);
   document.getElementById('btn-reset').addEventListener('click', reset);
 
   const algInput = document.getElementById('alg-input');
@@ -854,7 +1642,9 @@ kbd {
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') { e.preventDefault(); undo(); return; }
     if (e.ctrlKey || e.metaKey || e.altKey || e.repeat) return;
     if (e.key === 'Backspace') { e.preventDefault(); undo(); return; }
-    if (e.key === ' ' && !(e.target.closest && e.target.closest('button'))) { e.preventDefault(); scramble(); return; }
+    const onButton = e.target.closest && e.target.closest('button');
+    if (e.key === ' ' && !onButton) { e.preventDefault(); scramble(); return; }
+    if (e.key === 'Enter' && !onButton) { e.preventDefault(); requestSolve(); return; }
     const k = KEYMAP[e.key.toUpperCase()];
     if (k && drag.mode !== 'turn') { e.preventDefault(); doUser(makeMove(k, e.shiftKey ? "'" : '')); }
   });
@@ -872,6 +1662,7 @@ kbd {
 
   build();
   resize();
+  measureBands();
   renderHistory();
   refresh(true);
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(drawNet);
