@@ -67,8 +67,39 @@ body { background: var(--bg); color: var(--fg); font-family: var(--font-ui); }
   position: absolute; left: 16px; right: 16px; bottom: 14px;
   text-align: center; color: var(--muted); font-size: 12px; pointer-events: none; text-wrap: balance;
 }
+.scramble-bar {
+  position: absolute; top: 62px; left: 50%; transform: translateX(-50%);
+  width: min(660px, calc(100% - 32px));
+  display: flex; gap: 12px; align-items: flex-start;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
+  padding: 10px 12px 10px 14px; box-shadow: 0 8px 28px rgba(0, 0, 0, .10);
+}
+.scramble-bar .lbl {
+  flex: none; padding-top: 6px;
+  font: 600 11px/1 var(--font-ui); letter-spacing: .1em; text-transform: uppercase; color: var(--muted);
+}
+.scramble-moves {
+  flex: 1; min-width: 0; display: flex; flex-wrap: wrap; gap: 0 11px;
+  font: 500 17px/1.55 var(--font-mono);
+}
+.scramble-moves span { color: var(--muted); opacity: .55; transition: color .15s, opacity .15s; }
+.scramble-moves span.done { color: var(--fg); opacity: 1; }
+.scramble-moves span.on { color: var(--accent); opacity: 1; font-weight: 700; }
+.scramble-bar button { flex: none; font-size: 12px; padding: 5px 10px; }
+.big-scramble {
+  position: absolute; left: 50%; bottom: 40px; transform: translateX(-50%);
+  display: flex; align-items: center; gap: 10px;
+  font: 700 17px/1 var(--font-ui); letter-spacing: .01em;
+  padding: 15px 22px 15px 24px; border: 0; border-radius: 999px;
+  background: var(--accent); color: var(--accent-fg);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, .22);
+}
+.big-scramble:hover { background: var(--accent); filter: brightness(1.08); }
+.big-scramble:active { transform: translate(-50%, 1px); }
+.big-scramble:disabled { opacity: .6; cursor: progress; filter: none; }
+.big-scramble kbd { background: rgba(255, 255, 255, .2); color: inherit; border-color: rgba(0, 0, 0, .15); font-size: 11px; }
 .toast {
-  position: absolute; left: 50%; top: 64px; transform: translate(-50%, -8px); opacity: 0;
+  position: absolute; left: 50%; bottom: 104px; transform: translate(-50%, -8px); opacity: 0;
   transition: opacity .25s, transform .25s; pointer-events: none;
   background: var(--fg); color: var(--bg); padding: 10px 16px; border-radius: 10px;
   font-weight: 600; font-size: 14px; white-space: nowrap; font-variant-numeric: tabular-nums;
@@ -132,7 +163,12 @@ kbd {
 @media (max-width: 760px) {
   .app { grid-template-columns: minmax(0, 1fr); grid-template-rows: 55% 45%; }
   .panel { border-left: 0; border-top: 1px solid var(--line); padding: 16px 16px 24px; }
-  .toast { top: 56px; }
+  .scramble-bar { top: 56px; padding: 8px 10px; gap: 8px; }
+  .scramble-bar .lbl { display: none; }
+  .scramble-moves { font-size: 14px; gap: 0 8px; }
+  .big-scramble { bottom: 36px; font-size: 15px; padding: 12px 18px; }
+  .big-scramble kbd { display: none; }
+  .toast { bottom: 92px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .toast, button { transition: none; }
@@ -147,7 +183,17 @@ kbd {
       <div class="stat"><span>Moves</span><b id="moves">0</b></div>
       <div class="stat"><span>Time</span><b id="time">0:00.00</b></div>
     </div>
+    <div class="scramble-bar" id="scramble-bar" hidden>
+      <span class="lbl">Scramble</span>
+      <div class="scramble-moves" id="scramble-moves"></div>
+      <button type="button" id="btn-copy-scramble" title="Copy scramble to clipboard">Copy</button>
+    </div>
     <div class="toast" id="toast" role="status"></div>
+    <button type="button" class="big-scramble" id="btn-scramble-big" title="Apply a random 22-move scramble (Space)">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 3h5v5"/><path d="M4 20 21 3"/><path d="M21 16v5h-5"/><path d="m15 15 6 6"/><path d="M4 4l5 5"/></svg>
+      Scramble
+      <kbd>Space</kbd>
+    </button>
     <div class="hint">Drag a face to turn it · drag the background to orbit · scroll or pinch to zoom</div>
   </div>
 
@@ -203,6 +249,7 @@ kbd {
         <kbd>M</kbd> <kbd>E</kbd> <kbd>S</kbd> slices ·
         <kbd>X</kbd> <kbd>Y</kbd> <kbd>Z</kbd> whole cube ·
         hold <kbd>Shift</kbd> for prime ·
+        <kbd>Space</kbd> scramble ·
         <kbd>Backspace</kbd> undo
       </p>
     </section>
@@ -405,11 +452,12 @@ kbd {
 
   const ease = t => t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
 
-  function enqueue(move, kind, factor = 1) { queue.push({ move, kind, factor }); }
+  function enqueue(move, kind, factor = 1, idx = -1) { queue.push({ move, kind, factor, idx }); }
   function busy() { return !!anim || queue.length > 0 || drag.mode === 'turn'; }
 
   function startNext() {
-    const { move, kind, factor } = queue.shift();
+    const { move, kind, factor, idx } = queue.shift();
+    if (kind === 'scramble') markScramble(idx);
     const cs = grab(move.axis, move.layers);
     const dur = speedMs * factor * (Math.abs(move.angle) > Q * 1.5 ? 1.45 : 1);
     anim = { axis: move.axis, cs, from: 0, to: move.angle, start: performance.now(), dur: Math.max(dur, 16), kind, move };
@@ -431,6 +479,8 @@ kbd {
   function afterMove(done) {
     if (done.kind === 'scramble' && !queue.some(q => q.kind === 'scramble')) {
       phase = 'inspect'; moveCount = 0; elapsed = 0;
+      markScramble(Infinity);
+      bigScrambleBtn.disabled = false;
     }
     if (!queue.length) {
       const solved = isSolved();
@@ -454,17 +504,21 @@ kbd {
   function doUser(move) { recordUser(move); enqueue(move, 'user'); setChip('turning'); }
 
   function scramble() {
-    if (drag.mode === 'turn') return;
+    if (drag.mode === 'turn' || phase === 'scrambling') return;
     const faces = ['R', 'L', 'U', 'D', 'F', 'B'], sufs = ['', "'", '2'];
     let lastAxis = -1;
+    const names = [];
     for (let i = 0; i < 22; i++) {
       let f;
       do { f = faces[(Math.random() * 6) | 0]; } while (BASE[f].axis === lastAxis);
       lastAxis = BASE[f].axis;
       const m = makeMove(f, sufs[(Math.random() * 3) | 0]);
       history.push({ move: m, kind: 'scramble' });
-      enqueue(m, 'scramble', 0.45);
+      enqueue(m, 'scramble', 0.45, i);
+      names.push(m.name);
     }
+    showScramble(names);
+    bigScrambleBtn.disabled = true;
     phase = 'scrambling'; moveCount = 0; elapsed = 0;
     movesEl.textContent = '0';
     renderHistory(); setChip('turning');
@@ -490,8 +544,37 @@ kbd {
     build();
     history = []; phase = 'free'; moveCount = 0; elapsed = 0;
     movesEl.textContent = '0';
+    scrambleBar.hidden = true;
+    bigScrambleBtn.disabled = false;
     renderHistory(); refresh(true);
   }
+
+  // ---------- scramble banner ----------
+  const scrambleBar = document.getElementById('scramble-bar');
+  const scrambleMovesEl = document.getElementById('scramble-moves');
+  const copyScrambleBtn = document.getElementById('btn-copy-scramble');
+  const bigScrambleBtn = document.getElementById('btn-scramble-big');
+  let scrambleText = '';
+  function showScramble(names) {
+    scrambleText = names.join(' ');
+    scrambleMovesEl.innerHTML = names.map(n => `<span>${n}</span>`).join('');
+    scrambleBar.hidden = false;
+  }
+  function markScramble(i) {
+    scrambleMovesEl.querySelectorAll('span').forEach((s, j) => {
+      s.classList.toggle('done', j < i);
+      s.classList.toggle('on', j === i);
+    });
+  }
+  copyScrambleBtn.addEventListener('click', () => {
+    const done = () => { copyScrambleBtn.textContent = 'Copied'; setTimeout(() => (copyScrambleBtn.textContent = 'Copy'), 1500); };
+    const fallback = () => {
+      const range = document.createRange();
+      range.selectNodeContents(scrambleMovesEl);
+      const sel = getSelection(); sel.removeAllRanges(); sel.addRange(range);
+    };
+    try { navigator.clipboard.writeText(scrambleText).then(done, fallback); } catch (_) { fallback(); }
+  });
 
   // ---------- pointer interaction ----------
   const raycaster = new THREE.Raycaster();
@@ -728,6 +811,7 @@ kbd {
   });
 
   document.getElementById('btn-scramble').addEventListener('click', scramble);
+  bigScrambleBtn.addEventListener('click', scramble);
   document.getElementById('btn-undo').addEventListener('click', undo);
   document.getElementById('btn-solve').addEventListener('click', solve);
   document.getElementById('btn-reset').addEventListener('click', reset);
@@ -770,6 +854,7 @@ kbd {
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') { e.preventDefault(); undo(); return; }
     if (e.ctrlKey || e.metaKey || e.altKey || e.repeat) return;
     if (e.key === 'Backspace') { e.preventDefault(); undo(); return; }
+    if (e.key === ' ' && !(e.target.closest && e.target.closest('button'))) { e.preventDefault(); scramble(); return; }
     const k = KEYMAP[e.key.toUpperCase()];
     if (k && drag.mode !== 'turn') { e.preventDefault(); doUser(makeMove(k, e.shiftKey ? "'" : '')); }
   });
