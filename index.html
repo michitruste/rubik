@@ -23,6 +23,7 @@
   --accent-fg: #ffffff;
   --accent-soft: #d9efe5;
   --warn: #b0500a;
+  --case-off: #c3c8d0;
   --font-ui: "Archivo", system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, Consolas, monospace;
 }
@@ -30,14 +31,14 @@
   :root:not([data-theme="light"]) {
     --bg: #0e1014; --stage: #1a1e25; --panel: #161920; --fg: #e7eaf0; --muted: #959dac;
     --line: #2a2f39; --btn: #1f232b; --btn-hover: #2a2f39; --accent: #3ccb8f; --accent-fg: #05140d;
-    --accent-soft: #173528; --warn: #f0a35a;
+    --accent-soft: #173528; --warn: #f0a35a; --case-off: #3b414c;
     color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
   --bg: #0e1014; --stage: #1a1e25; --panel: #161920; --fg: #e7eaf0; --muted: #959dac;
   --line: #2a2f39; --btn: #1f232b; --btn-hover: #2a2f39; --accent: #3ccb8f; --accent-fg: #05140d;
-  --accent-soft: #173528; --warn: #f0a35a;
+  --accent-soft: #173528; --warn: #f0a35a; --case-off: #3b414c;
   color-scheme: dark;
 }
 [hidden] { display: none !important; }
@@ -207,7 +208,7 @@ button {
 }
 button:hover { background: var(--btn-hover); }
 button:active { transform: translateY(1px); }
-button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 button.primary { background: var(--accent); color: var(--accent-fg); border-color: transparent; font-weight: 600; }
 button.primary:hover { filter: brightness(1.08); }
 button:disabled { cursor: not-allowed; opacity: .5; }
@@ -217,6 +218,7 @@ button:disabled { cursor: not-allowed; opacity: .5; }
 .pad button { font: 500 14px/1 var(--font-mono); padding: 8px 0 6px; }
 .pad .sw { display: block; width: 14px; height: 4px; margin: 5px auto 0; border-radius: 2px; box-shadow: inset 0 0 0 1px rgba(0,0,0,.18); }
 .pad .gap { grid-column: 1 / -1; height: 4px; }
+.pad .sw.w { height: 7px; }
 
 .alg { display: flex; gap: 6px; }
 .alg input {
@@ -242,6 +244,47 @@ kbd {
   border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 4px; padding: 0 4px;
 }
 
+.chip[data-state="wide"] { background: var(--accent-soft); color: var(--accent); border-color: var(--accent); }
+.wide-btn { width: 100%; padding: 9px 10px; }
+.sol-algs { margin: -6px 0 0; color: var(--muted); font-size: 12px; }
+button.link { background: none; border: 0; padding: 0; color: var(--accent); font-size: 12px; text-decoration: underline; text-underline-offset: 2px; }
+button.link:hover { background: none; }
+
+/* algorithm picker */
+.algdlg {
+  width: min(780px, calc(100vw - 32px)); max-height: calc(100dvh - 48px);
+  padding: 0; border: 1px solid var(--line); border-radius: 14px;
+  background: var(--panel); color: var(--fg); box-shadow: 0 24px 60px rgba(0, 0, 0, .3);
+}
+.algdlg[open] { display: flex; flex-direction: column; }
+.algdlg::backdrop { background: rgba(8, 10, 14, .5); }
+.dlg-head { display: flex; gap: 12px; align-items: flex-start; padding: 18px 20px 4px; }
+.dlg-head h2 { font-size: 12px; margin-bottom: 8px; }
+.dlg-head .sol-note { margin: 0; max-width: 60ch; }
+.dlg-head .x { margin-left: auto; flex: none; width: 32px; height: 32px; padding: 0; font-size: 18px; line-height: 1; border-radius: 50%; }
+.dlg-tools { display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: center; padding: 12px 20px; border-bottom: 1px solid var(--line); }
+.dlg-tools .seg { width: 230px; }
+.dlg-tools .presets { margin: 0; }
+.case-list { overflow-y: auto; min-height: 0; padding: 4px 20px 20px; }
+.case { display: grid; grid-template-columns: auto 64px minmax(0, 1fr); gap: 4px 14px; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--line); }
+.case:last-child { border-bottom: 0; }
+.case input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--accent); margin: 0; cursor: pointer; }
+.case svg { width: 64px; height: 64px; display: block; }
+.case.off svg, .case.off .cbody { opacity: .45; }
+.cname { display: flex; align-items: baseline; gap: 8px; font: 600 13px/1.3 var(--font-ui); margin-bottom: 6px; }
+.cname small { color: var(--muted); font-weight: 500; }
+.cname .n { margin-left: auto; color: var(--muted); font: 500 11px var(--font-mono); }
+.cname .tag { font: 700 10px/1 var(--font-ui); letter-spacing: .08em; text-transform: uppercase; color: var(--accent); }
+.cpick { display: flex; gap: 6px; }
+.cpick select, .cpick input {
+  font: 13px var(--font-mono); color: var(--fg); background: var(--bg);
+  border: 1px solid var(--line); border-radius: 8px; padding: 7px 8px; min-width: 0;
+}
+.cpick select { flex: none; width: 118px; font-family: var(--font-ui); cursor: pointer; }
+.cpick input { flex: 1; }
+.cpick input[aria-invalid="true"] { border-color: var(--warn); }
+.case .err { margin: 5px 0 0; }
+
 @media (max-width: 1180px) {
   /* not enough room for three columns: the solution takes the side panel's place, on the left */
   .app.with-sol { grid-template-columns: 340px minmax(0, 1fr); grid-template-areas: "sol stage"; }
@@ -264,6 +307,13 @@ kbd {
   .big-btn kbd { display: none; }
   .hint { display: none; }
   .ov-bottom { padding-bottom: 10px; }
+  .dlg-head, .dlg-tools { padding-left: 16px; padding-right: 16px; }
+  .dlg-head .sol-note { display: block; }
+  .case-list { padding: 4px 16px 16px; }
+  .case { grid-template-columns: auto 52px minmax(0, 1fr); gap: 4px 10px; }
+  .case svg { width: 52px; height: 52px; }
+  .cpick { flex-wrap: wrap; }
+  .cpick select { width: 100%; }
 }
 @media (prefers-reduced-motion: reduce) {
   .toast, button { transition: none; }
@@ -287,6 +337,7 @@ kbd {
       <button type="button" data-mode="fewest" aria-pressed="false">Fewest moves</button>
     </div>
     <p class="sol-note" id="sol-note"></p>
+    <p class="sol-algs">Last layer: <span id="sol-alg-sum"></span> · <button type="button" class="link" data-open-algs>change</button></p>
     <p class="sol-msg" id="sol-msg" hidden></p>
     <div id="sol-colors-wrap">
       <p class="mini">Cross color</p>
@@ -310,6 +361,7 @@ kbd {
           <div class="chip" id="chip" data-state="solved">Solved</div>
           <div class="stat"><span>Moves</span><b id="moves">0</b></div>
           <div class="stat"><span>Time</span><b id="time">0:00.00</b></div>
+          <div class="chip" id="wide-chip" data-state="wide" hidden title="The next face key turns two layers. Press W or Esc to cancel.">Wide</div>
         </div>
         <div class="scramble-bar card" id="scramble-bar" hidden>
           <span class="lbl">Scramble</span>
@@ -364,11 +416,17 @@ kbd {
     <section>
       <h2>Algorithm</h2>
       <form class="alg" id="alg-form">
-        <input id="alg-input" type="text" spellcheck="false" autocomplete="off" placeholder="R U R' U'" aria-label="Algorithm in Singmaster notation">
+        <input id="alg-input" type="text" spellcheck="false" autocomplete="off" placeholder="R U R' U' r f'" aria-label="Algorithm in Singmaster notation">
         <button type="submit" class="primary">Play</button>
       </form>
       <p class="err" id="alg-err" hidden></p>
       <div class="presets" id="presets"></div>
+    </section>
+
+
+    <section>
+      <h2>CFOP algorithms <output id="alg-sum"></output></h2>
+      <button type="button" class="wide-btn" data-open-algs>Choose OLL &amp; PLL algorithms…</button>
     </section>
 
     <section>
@@ -393,6 +451,7 @@ kbd {
         <kbd>M</kbd> <kbd>E</kbd> <kbd>S</kbd> slices ·
         <kbd>X</kbd> <kbd>Y</kbd> <kbd>Z</kbd> whole cube ·
         hold <kbd>Shift</kbd> for prime ·
+        <kbd>W</kbd> then a face for a wide turn (r, u, f…) ·
         <kbd>Space</kbd> scramble ·
         <kbd>Enter</kbd> CFOP solve ·
         <kbd>Backspace</kbd> undo
@@ -400,6 +459,28 @@ kbd {
     </section>
   </aside>
 </div>
+
+<dialog class="algdlg" id="alg-dlg" aria-labelledby="alg-dlg-title">
+  <div class="dlg-head">
+    <div>
+      <h2 id="alg-dlg-title">CFOP algorithms</h2>
+      <p class="sol-note">The solver only uses the cases you turn on. With fewer cases it does the last layer in 2 or 3 looks, the way a beginner would. Pick another algorithm or type your own; it is checked against the case.</p>
+    </div>
+    <button type="button" class="x" id="alg-dlg-close" aria-label="Close" title="Close">×</button>
+  </div>
+  <div class="dlg-tools">
+    <div class="seg" id="alg-tab" role="group" aria-label="Algorithm set">
+      <button type="button" data-kind="oll" aria-pressed="true">OLL</button>
+      <button type="button" data-kind="pll" aria-pressed="false">PLL</button>
+    </div>
+    <div class="presets">
+      <button type="button" data-preset="all" title="Turn every case on (1-look)">All on</button>
+      <button type="button" data-preset="2look" title="Only the cases of 2-look OLL / PLL">2-look set</button>
+      <button type="button" data-preset="defaults" title="Put back the standard algorithm for every case">Standard algorithms</button>
+    </div>
+  </div>
+  <div class="case-list" id="case-list"></div>
+</dialog>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
@@ -724,52 +805,135 @@ function CFOP_FACTORY() {
   }
 
   // ---- last layer ----
+  // The solver uses only the OLL / PLL algorithms the user switched on. If one algorithm
+  // can't finish a step, it chains up to MAX_LOOKS of them (2-look / 3-look last layer).
   const AUF = ['', 'U', 'U2', "U'"];
-  const OLL_LIST = Object.entries(OLL).map(([n, a]) => [Number(n), split(a)]);
-  const PLL_LIST = [['', []], ...Object.entries(PLL).map(([n, a]) => [n, split(a)])];
-  // Every OLL (with its AUF) that orients the last layer
-  function ollOptions(c) {
-    if (isOriented(c)) return [{ num: 0, moves: [], c }];
-    const out = [];
-    for (const pre of AUF) {
-      const pc = pre ? applyAlg(c, [pre]) : c;
-      for (const [num, toks] of OLL_LIST) {
-        const ac = applyAlg(pc, toks);
-        if (isOriented(ac)) out.push({ num, moves: pre ? [pre, ...toks] : toks, c: ac });
-      }
-    }
-    if (!out.length) throw new Error('No OLL case matched');
+  const MAX_LOOKS = 3;
+  function compile(toks) {               // one permutation for a whole sequence
+    const C = Int16Array.from({ length: 54 }, (_, i) => i);
+    for (const t of toks) { const P = perm(t); for (let i = 0; i < 54; i++) C[i] = P[C[i]]; }
+    return C;
+  }
+  function applyP(colors, C) {
+    const out = new Array(54);
+    for (let i = 0; i < 54; i++) out[C[i]] = colors[i];
     return out;
   }
-  // Pick the OLL + PLL pair with the fewest moves in total
-  function solveLL(c) {
-    let best = null;
-    for (const o of ollOptions(c)) {
-      if (best && o.moves.length >= best.len) continue;
-      const p = solvePLL(o.c);
-      const len = o.moves.length + p.moves.length;
-      if (!best || len < best.len) best = { len, oll: o, pll: p };
-    }
-    return best;
+  const AUF_C = AUF.map(a => compile(a ? [a] : []));
+  const LL_SLOTS = SLOTS.map((s, i) => i).filter(i => SLOTS[i].p[1] === 1);
+  const llKey = (c, oriented) => {
+    const t = c[CENTER['0,1,0']];
+    let k = '';
+    for (const i of LL_SLOTS) k += oriented ? (c[i] === t ? 1 : 0) : c[i];
+    return k;
+  };
+  let LL = null, LL_SIG = null;
+  function useAlgs(cfg) {
+    const sig = cfg ? JSON.stringify(cfg) : '';
+    if (LL && sig === LL_SIG) return;
+    const entry = ([id, s]) => {
+      const toks = split(s);
+      return { id, toks, pre: AUF.map(a => compile(a ? [a, ...toks] : toks)) };
+    };
+    LL = { oll: (cfg ? cfg.oll : Object.entries(OLL)).map(entry), pll: (cfg ? cfg.pll : Object.entries(PLL)).map(entry) };
+    LL_SIG = sig;
   }
-  function solvePLL(c) {
-    let best = null;
-    for (const pre of AUF) {
-      const pc = pre ? applyAlg(c, [pre]) : c;
-      for (const [name, toks] of PLL_LIST) {
-        if (!name && pre) continue;
-        const ac = applyAlg(pc, toks);
-        for (const post of AUF) {
-          const len = toks.length + (pre ? 1 : 0) + (post ? 1 : 0);
-          if (best && len >= best.len) continue;
-          if (isSolved(post ? applyAlg(ac, [post]) : ac)) {
-            best = { name, len, moves: [...(pre ? [pre] : []), ...toks, ...(post ? [post] : [])] };
-          }
+  // Breadth-first over looks: every node is (state, looks so far); kept per state key, shortest first
+  function searchLooks(c, algs, done, key, what) {
+    let frontier = [{ c, looks: [], len: 0 }];
+    for (let d = 1; d <= MAX_LOOKS; d++) {
+      const hits = [], next = new Map();
+      for (const node of frontier) for (const alg of algs) for (let a = 0; a < 4; a++) {
+        const moves = a ? [AUF[a], ...alg.toks] : alg.toks;
+        const item = { c: applyP(node.c, alg.pre[a]), looks: [...node.looks, { id: alg.id, moves }], len: node.len + moves.length };
+        if (done(item)) hits.push(item);
+        else if (d < MAX_LOOKS) {
+          const k = key(item.c), old = next.get(k);
+          if (!old || item.len < old.len) next.set(k, item);
         }
       }
+      if (hits.length) return hits;
+      frontier = [...next.values()];
     }
-    if (!best) throw new Error('No PLL case matched');
+    throw new Error(`Your selected ${what} algorithms can't finish this cube in ${MAX_LOOKS} looks. Turn on more ${what} cases.`);
+  }
+  // Ways to orient the last layer with the fewest looks
+  function ollOptions(c) {
+    if (isOriented(c)) return [{ looks: [], len: 0, c }];
+    const hits = searchLooks(c, LL.oll, it => isOriented(it.c), x => llKey(x, true), 'OLL');
+    return hits.sort((a, b) => a.len - b.len).slice(0, 16);
+  }
+  function aufToSolve(c) {
+    for (let a = 0; a < 4; a++) if (isSolved(a ? applyP(c, AUF_C[a]) : c)) return a;
+    return -1;
+  }
+  function solvePLL(c) {
+    const a0 = aufToSolve(c);
+    if (a0 >= 0) return { looks: [], post: AUF[a0], len: a0 ? 1 : 0, moves: a0 ? [AUF[a0]] : [] };
+    const hits = searchLooks(c, LL.pll, it => (it.post = aufToSolve(it.c)) >= 0, x => llKey(x, false), 'PLL');
+    let best = null;
+    for (const h of hits) {
+      const len = h.len + (h.post ? 1 : 0);
+      if (!best || len < best.len) best = { looks: h.looks, post: AUF[h.post], len };
+    }
+    best.moves = [...best.looks.flatMap(l => l.moves), ...(best.post ? [best.post] : [])];
     return best;
+  }
+  // Pick the OLL + PLL combination with the fewest moves in total
+  function solveLL(c) {
+    let best = null, err = null;
+    for (const o of ollOptions(c)) {
+      if (best && o.len >= best.len) continue;
+      let p;
+      try { p = solvePLL(o.c); } catch (e) { err = e; continue; }
+      const len = o.len + p.len;
+      if (!best || len < best.len) best = { len, oll: o, pll: p };
+    }
+    if (!best) throw err;
+    return best;
+  }
+  const lookNote = (name, i, n) => [name, n > 1 ? `look ${i + 1} of ${n}` : ''].filter(Boolean).join(' · ');
+  function llStages({ oll, pll }) {
+    const out = [];
+    if (!oll.looks.length) out.push({ kind: 'oll', label: 'OLL', note: 'skip', moves: [] });
+    oll.looks.forEach((l, i, a) => out.push({ kind: 'oll', label: `OLL ${l.id}`, note: lookNote(OLL_NAMES[l.id] || '', i, a.length), moves: l.moves }));
+    if (!pll.looks.length) {
+      out.push({ kind: 'pll', label: pll.moves.length ? 'AUF' : 'PLL', note: pll.moves.length ? 'already permuted' : 'skip', moves: pll.moves });
+    }
+    pll.looks.forEach((l, i, a) => out.push({
+      kind: 'pll', label: 'PLL', note: lookNote(`${l.id}-perm`, i, a.length),
+      moves: i === a.length - 1 && pll.post ? [...l.moves, pll.post] : l.moves,
+    }));
+    return out;
+  }
+
+  // ---- algorithm library helpers (for the picker UI) ----
+  const FACE_OF = { '1,0,0': 'R', '-1,0,0': 'L', '0,1,0': 'U', '0,-1,0': 'D', '0,0,1': 'F', '0,0,-1': 'B' };
+  const SOLVED = SLOTS.map(s => FACE_OF[PK(s.n)]);
+  const DEFAULTS = { oll: OLL, pll: PLL };
+  const invTok = t => t.endsWith("'") ? t.slice(0, -1) : t.endsWith('2') ? t : t + "'";
+  // The case an algorithm is meant for: a solved cube with the default algorithm undone
+  const caseState = (kind, id) => applyAlg(SOLVED, split(DEFAULTS[kind][id]).reverse().map(invTok));
+  function f2lSolved(c) {
+    for (let i = 0; i < 54; i++) if (SLOTS[i].p[1] < 1 && c[i] !== c[CENTER[PK(SLOTS[i].n)]]) return false;
+    return true;
+  }
+  // Does this algorithm solve the case, from any U angle (and with a final AUF for PLL)?
+  function checkCase(kind, id, alg) {
+    let toks;
+    try { toks = split(alg); toks.forEach(perm); } catch (_) { return false; }
+    const c = caseState(kind, id);
+    for (const pre of AUF) {
+      const ac = applyAlg(c, pre ? [pre, ...toks] : toks);
+      if (kind === 'oll') { if (isOriented(ac) && f2lSolved(ac)) return true; }
+      else if (aufToSolve(ac) >= 0) return true;
+    }
+    return false;
+  }
+  // Last-layer stickers of a case, for drawing its diagram
+  function caseView(kind, id) {
+    const c = caseState(kind, id);
+    return LL_SLOTS.map(i => ({ p: SLOTS[i].p, n: SLOTS[i].n, c: c[i] }));
   }
 
   // ---- stitching ----
@@ -817,10 +981,7 @@ function CFOP_FACTORY() {
         stages.push({ kind: 'f2l', label: `F2L ${++n}`, note: PAIRS[k].name, moves: [] });
       }
       const c = applyAlg(rc, stages.filter(s => s.kind !== 'rot').flatMap(s => s.moves));
-      const ll = solveLL(c);
-      const { oll, pll } = ll;
-      stages.push({ kind: 'oll', label: oll.num ? `OLL ${oll.num}` : 'OLL', note: oll.num ? (OLL_NAMES[oll.num] || '') : 'skip', moves: oll.moves });
-      stages.push({ kind: 'pll', label: pll.name || !pll.moves.length ? 'PLL' : 'AUF', note: pll.name ? `${pll.name}-perm` : (pll.moves.length ? 'already permuted' : 'skip'), moves: pll.moves });
+      stages.push(...llStages(solveLL(c)));
       const merged = mergeStages(stages);
       const all = merged.flatMap(s => s.moves);
       const total = countMoves(all);
@@ -925,9 +1086,7 @@ function CFOP_FACTORY() {
         stages.push({ kind: 'f2l', label: `F2L ${n + 1}`, note: '', moves: [] });
       }
       const ll = solveLL(f2l.colors);
-      const { oll, pll } = ll;
-      stages.push({ kind: 'oll', label: oll.num ? `OLL ${oll.num}` : 'OLL', note: oll.num ? (OLL_NAMES[oll.num] || '') : 'skip', moves: oll.moves });
-      stages.push({ kind: 'pll', label: pll.name || !pll.moves.length ? 'PLL' : 'AUF', note: pll.name ? `${pll.name}-perm` : (pll.moves.length ? 'already permuted' : 'skip'), moves: pll.moves });
+      stages.push(...llStages(ll));
       const merged = mergeStages(stages);
       const all = merged.flatMap(s => s.moves);
       const score = 2 * crossToks.length + f2l.cost + 2 * ll.len;
@@ -938,7 +1097,8 @@ function CFOP_FACTORY() {
              total: countMoves(best.all), rotations: countRots(best.all), score: best.score };
   }
 
-  function solveAll(stickers, progress, mode) {
+  function solveAll(stickers, progress, mode, algs) {
+    useAlgs(algs);
     const colors = new Array(54);
     for (const s of stickers) {
       const n = [0, 0, 0]; n[s.axis] = s.sign;
@@ -961,17 +1121,16 @@ function CFOP_FACTORY() {
   }
 
   // Solve a scramble given in notation, starting from a solved cube (used for self-tests)
-  function solveScramble(alg, mode) {
-    const FACE = { '1,0,0': 'R', '-1,0,0': 'L', '0,1,0': 'U', '0,-1,0': 'D', '0,0,1': 'F', '0,0,-1': 'B' };
-    const colors = applyAlg(SLOTS.map(s => FACE[PK(s.n)]), split(alg));
+  function solveScramble(alg, mode, algs) {
+    const colors = applyAlg(SOLVED, split(alg));
     const stickers = SLOTS.map((s, i) => {
       const axis = s.n.findIndex(v => v !== 0);
       return { p: s.p, axis, sign: s.n[axis], color: colors[i] };
     });
-    return solveAll(stickers, null, mode);
+    return solveAll(stickers, null, mode, algs);
   }
 
-  return { solveAll, solveScramble };
+  return { solveAll, solveScramble, checkCase, caseView, library: { OLL, PLL, OLL_NAMES } };
 }
 </script>
 
@@ -1352,6 +1511,7 @@ function CFOP_FACTORY() {
     try { navigator.clipboard.writeText(scrambleText).then(done, fallback); } catch (_) { fallback(); }
   });
 
+
   // ---------- CFOP solution ----------
   const appEl = document.getElementById('app');
   const solEl = document.getElementById('solution');
@@ -1392,7 +1552,7 @@ function CFOP_FACTORY() {
         self.onmessage = e => {
           const id = e.data.id;
           try {
-            const res = api.solveAll(e.data.stickers, p => self.postMessage({ type: 'progress', id, p }), e.data.mode);
+            const res = api.solveAll(e.data.stickers, p => self.postMessage({ type: 'progress', id, p }), e.data.mode, e.data.algs);
             self.postMessage({ type: 'result', id, res });
           } catch (err) { self.postMessage({ type: 'error', id, message: String(err && err.message || err) }); }
         };`;
@@ -1402,12 +1562,10 @@ function CFOP_FACTORY() {
     } catch (_) { worker = null; }
     return worker;
   }
-  let localApi = null;
-  function solveLocally(id, data, mode) {
+  function solveLocally(id, data, mode, algs) {
     setTimeout(() => {
       try {
-        localApi = localApi || CFOP_FACTORY();
-        const res = localApi.solveAll(data, () => {}, mode);
+        const res = libApi.solveAll(data, () => {}, mode, algs);
         onSolverMessage({ type: 'result', id, res });
       } catch (err) { onSolverMessage({ type: 'error', id, message: String(err && err.message || err) }); }
     }, 30);
@@ -1436,12 +1594,13 @@ function CFOP_FACTORY() {
     showSolMessage('Reading the cube…', true);
     cfopBtn.disabled = true;
     const data = stickers();
-    const key = solMode + '#' + stateKey(data);
+    const algs = algConfig();
+    const key = solMode + '#' + JSON.stringify(algs) + '#' + stateKey(data);
     requestSolve.version = cubeVersion;
     requestSolve.key = key;
     if (solCache.has(key)) { cfopBtn.disabled = false; showResults(solCache.get(key)); return; }
     const w = getWorker();
-    if (w) w.postMessage({ id, stickers: data, mode: solMode }); else solveLocally(id, data, solMode);
+    if (w) w.postMessage({ id, stickers: data, mode: solMode, algs }); else solveLocally(id, data, solMode, algs);
   }
   function onSolverMessage(msg) {
     if (msg.id !== pendingId) return;
@@ -1453,7 +1612,11 @@ function CFOP_FACTORY() {
     }
     cfopBtn.disabled = false;
     if (requestSolve.version !== cubeVersion) { closeSolution(); return; }
-    if (msg.type === 'error') { showSolMessage(`Could not solve: ${msg.message}`, false); return; }
+    if (msg.type === 'error') {
+      const fix = /algorithms/.test(msg.message) ? ' <button type="button" class="link" data-open-algs>Choose algorithms</button>' : '';
+      showSolMessage(`Could not solve: ${msg.message}${fix}`, false);
+      return;
+    }
     if (msg.res.solved) { showSolMessage('The cube is already solved. Scramble it first.', false); return; }
     solCache.set(requestSolve.key, msg.res.results);
     if (solCache.size > 12) solCache.delete(solCache.keys().next().value);
@@ -1469,6 +1632,7 @@ function CFOP_FACTORY() {
       b.disabled = !!(sol && sol.rewinding);
     });
     solNote.textContent = MODE_NOTES[solMode];
+    renderAlgSummary();
   }
   function showSolMessage(text, spinning) {
     openSolPanel();
@@ -1642,6 +1806,221 @@ function CFOP_FACTORY() {
     if (sol && sol.flat && sol.pos > 0) solutionRewind(switchMode); else switchMode();
   });
   cfopBtn.addEventListener('click', requestSolve);
+
+  // ---------- OLL / PLL algorithm choices ----------
+  const libApi = CFOP_FACTORY();     // case checks and diagrams; also the solver when Workers are unavailable
+  const LIB = libApi.library;
+  // Well-known alternatives, each checked to solve its case. The standard algorithm comes first.
+  const ALT = {
+    oll: {
+      1: ["R U B' R B R2 U' R' F R F'"], 2: ["r U r' U2 R U2 R' U2 r U' r'", "F R U R' U' S R U R' U' f'"],
+      3: ["r' R2 U R' U r U2 r' U M'"], 4: ["M U' r U2 r' U' R U' R2 r", "r' R U' r U2 r' U' R U' R2 r"],
+      5: ["l' U2 L U L' U l"], 6: ["l U2 L' U' L U' l'"], 7: ["l U L' U L U2 l'", "L' U2 L U2 L F' L' F"],
+      8: ["l' U' L U' L' U2 l", "R U2 R' U2 R' F R F'"], 9: ["R' U' R U' R' U R' F R F' U R", "L' U' L U' L F' L' F L' U2 L"],
+      10: ["R U R' y R' F R U' R' F' R", "L' U' L U L F' L2 U' L U F"], 11: ["M R U R' U R U2 R' U M'", "r' R2 U R' U R U2 R' U M'"],
+      12: ["M U2 R' U' R U' R' U2 R U M'", "F R U R' U' F' U F R U R' U' F'"], 13: ["r U' r' U' r U r' F' U F", "F U R U2 R' U' R U R' F'"],
+      14: ["r' U r U r' U' r y R U' R'", "R' F R U R' F' R y' R U' R'"], 15: ["l' U' l L' U' L U l' U l"],
+      16: ["R' F R U R' U' F' R U' R' U2 R"], 17: ["F R' F' R2 r' U R U' R' U' M'"], 18: ["R U2 R2 F R F' U2 M' U R U' r'"],
+      19: ["M U R U R' U' M' R' F R F'", "R' U2 F R U R' U' F2 U2 F R"], 20: ["M U R U R' U' M2 U R U' r'", "r' R U R U R' U' M2 U R U' r'"],
+      21: ["R U R' U R U' R' U R U2 R'", "R' U' R U' R' U R U' R' U2 R", "F R U R' U' R U R' U' R U R' U' F'"],
+      22: ["R' U2 R2 U R2 U R2 U2 R'", "f R U R' U' f' F R U R' U' F'"], 23: ["R2 D R' U2 R D' R' U2 R'"],
+      24: ["L F R' F' L' F R F'"], 25: ["R' F R B' R' F' R B", "F R' F' r U R U' r'"],
+      26: ["R' U' R U' R' U2 R", "L' U' L U' L' U2 L"], 27: ["R' U2 R U R' U R", "L' U2 L U L' U L"],
+      28: ["M' U M U2 M' U M", "r U R' U' M U R U' R'"], 29: ["M U R U R' U' R' F R F' M'"],
+      30: ["F U R U2 R' U' R U2 R' U' F'", "R2 U R' B' R U' R2 U R B R'"], 31: ["S' L' U' L U L F' L' f"],
+      32: ["S R U R' U' R' F R f'", "R U B' U' R' U R B R'"], 33: ["F R U' R' U R U R' F'"],
+      34: ["F R U R' U' R' F' r U R U' r'"], 36: ["R' U' R U' R' U R U R B' R' B"], 37: ["F R U' R' U' R U R' F'"],
+      39: ["R U R' F' U' F U R U2 R'"], 42: ["R' F R F' R' F R F' R U R' U' R U R'"],
+      43: ["f' L' U' L U f", "R' U' F' U F R"], 44: ["f R U R' U' f'"], 47: ["F' L' U' L U L' U' L U F"],
+      49: ["R B' R2 F R2 B R2 F' R"], 50: ["R' F R2 B' R2 F' R2 B R'"], 51: ["f R U R' U' R U R' U' f'"],
+      52: ["R' U' R U' R' U F' U F R"], 53: ["l' U2 L U L' U' L U L' U l"], 54: ["r U2 R' U' R U R' U' R U' r'"],
+      55: ["R U2 R2 U' R U' R' U2 F R F'"], 56: ["F R U R' U' R F' r U R' U' r'", "r U r' U R U' R' U R U' R' r U' r'"],
+      57: ["M' U M' U M' U2 M U M U M U2"],
+    },
+    pll: {
+      Aa: ["R' F R' B2 R F' R' B2 R2", "x L2 D2 L' U' L D2 L' U L' x'"], Ab: ["R B' R F2 R' B R F2 R2"],
+      E: ["x' L' U L D' L' U' L D L' U' L D' L' U L D x", "R2 U R' U' y R U R' U' R U R' U' R U R' y' R U' R2"],
+      F: ["R' U R U' R2 F' U' F U R F R' F' R2"],
+      Ga: ["R2 u R' U R' U' R u' R2 F' U F", "R2 u R' U R' U' R u' R2 y' R' U R"],
+      Gb: ["F' U' F R2 u R' U R U' R u' R2", "R' U' R y R2 u R' U R U' R u' R2"],
+      Gc: ["R2 u' R U' R U R' u R2 f R' f'", "R2 u' R U' R U R' u R2 B U' B'"],
+      Gd: ["R U R' y' R2 u' R U' R' U R' u R2", "f R f' R2 u' R U' R' U R' u R2"],
+      H: ["R2 U2 R U2 R2 U2 R2 U2 R U2 R2", "M2 U' M2 U2 M2 U' M2"],
+      Ja: ["R' U L' U2 R U' R' U2 R L", "L' U' L F L' U' L U L F' L2 U L"], Jb: ["R U2 R' U' R U2 L' U R' U' L"],
+      Na: ["L U' R U2 L' U R' L U' R U2 L' U R'"],
+      Nb: ["R' U R' F R F' R U' R' F' U F R U R' U' R", "r' D' F r U' r' F' D r2 U r' U' r' F r F'"],
+      Ra: ["R U R' F' R U2 R' U2 R' F R U R U2 R'", "L U2 L' U2 L F' L' U' L U L F L2"],
+      Rb: ["R' U2 R U2 R' F R U R' U' R' F' R2", "R' U2 R' D' R U' R' D R U R U' R' U' R"],
+      Ua: ["R U' R U R U R U' R' U' R2"], Ub: ["R2 U R U R' U' R' U' R' U R'", "R' U R' U' R' U' R' U R U R2"],
+      V: ["R' U R' U' y R' F' R2 U' R' U R' F R F", "R' U R' d' R' F' R2 U' R' U R' F R F"],
+      Y: ["F R' F R2 U' R' U' R U R' F' R U R' U' F'"],
+      Z: ["M2 U M2 U M' U2 M2 U2 M'", "R' U' R U' R U R U' R' U R U R2 U' R'"],
+    },
+  };
+  // 2-look OLL: edges (45, 44) then corners (21–27); 2-look PLL: corners (T, Y) then edges (U, H, Z)
+  const TWO_LOOK = { oll: ['21', '22', '23', '24', '25', '26', '27', '44', '45'], pll: ['T', 'Y', 'Ua', 'Ub', 'H', 'Z'] };
+  const CASES = { oll: Object.keys(LIB.OLL), pll: Object.keys(LIB.PLL) };
+  const choicesFor = (kind, id) => [kind === 'oll' ? LIB.OLL[id] : LIB.PLL[id], ...(ALT[kind][id] || [])];
+  const algLen = alg => alg.split(' ').filter(t => !/^[xyz]/.test(t)).length;
+
+  // Saved per case only where it differs from the standard: { off: true } and/or { alg }
+  let algPrefs = { oll: {}, pll: {} };
+  try {
+    const saved = JSON.parse(localStorage.getItem('cfop-algs') || 'null');
+    if (saved && saved.oll && saved.pll) algPrefs = saved;
+  } catch (_) {}
+  const pref = (kind, id) => algPrefs[kind][id] || {};
+  const algOf = (kind, id) => pref(kind, id).alg || choicesFor(kind, id)[0];
+  const isOn = (kind, id) => !pref(kind, id).off;
+  const onCount = kind => CASES[kind].filter(id => isOn(kind, id)).length;
+  function setPref(kind, id, patch) {
+    const p = { ...pref(kind, id), ...patch };
+    if (!p.off) delete p.off;
+    if (!p.alg || p.alg === choicesFor(kind, id)[0]) delete p.alg;
+    if (Object.keys(p).length) algPrefs[kind][id] = p; else delete algPrefs[kind][id];
+    algsChanged = true;
+    try { localStorage.setItem('cfop-algs', JSON.stringify(algPrefs)); } catch (_) {}
+  }
+  function algConfig() {
+    const pick = kind => CASES[kind].filter(id => isOn(kind, id)).map(id => [id, algOf(kind, id)]);
+    return { oll: pick('oll'), pll: pick('pll') };
+  }
+  const algSumEl = document.getElementById('alg-sum');
+  const solAlgSum = document.getElementById('sol-alg-sum');
+  function renderAlgSummary() {
+    const changed = ['oll', 'pll'].reduce((n, k) => n + Object.values(algPrefs[k]).filter(p => p.alg).length, 0);
+    const txt = `${onCount('oll')}/${CASES.oll.length} OLL · ${onCount('pll')}/${CASES.pll.length} PLL${changed ? ` · ${changed} changed` : ''}`;
+    algSumEl.textContent = txt;
+    solAlgSum.textContent = txt;
+  }
+
+  // Top-down diagram of a case: the 3x3 top face plus the side stickers of the top layer
+  function caseSvg(kind, id) {
+    const rects = libApi.caseView(kind, id).map(({ p: [x, , z], n: [nx, ny, nz], c }) => {
+      const fill = c === 'U' ? COLORS.D : kind === 'oll' ? 'var(--case-off)' : COLORS[c];
+      let rx, ry, w = 12, h = 12;
+      if (ny) { rx = 11 + (x + 1) * 14; ry = 11 + (z + 1) * 14; }
+      else if (nz) { rx = 11 + (x + 1) * 14; ry = nz > 0 ? 56 : 3; h = 5; }
+      else { ry = 11 + (z + 1) * 14; rx = nx > 0 ? 56 : 3; w = 5; }
+      return `<rect x="${rx}" y="${ry}" width="${w}" height="${h}" rx="2" fill="${fill}"/>`;
+    });
+    return `<svg viewBox="0 0 64 64" aria-hidden="true"><rect x="9" y="9" width="44" height="44" rx="4" fill="#15171c"/>${rects.join('')}</svg>`;
+  }
+  const caseName = (kind, id) => kind === 'oll' ? `OLL ${id}` : `${id}-perm`;
+  function caseRow(kind, id) {
+    const name = caseName(kind, id), nick = kind === 'oll' ? LIB.OLL_NAMES[id] : '';
+    const ch = choicesFor(kind, id), alg = algOf(kind, id), sel = ch.indexOf(alg);
+    const opts = ch.map((a, i) => `<option value="${i}" title="${a}"${i === sel ? ' selected' : ''}>${i ? `Option ${i + 1}` : 'Standard'}</option>`).join('')
+      + `<option value="custom"${sel < 0 ? ' selected' : ''}>Custom</option>`;
+    return `<div class="case${isOn(kind, id) ? '' : ' off'}" data-id="${id}">
+      <input type="checkbox"${isOn(kind, id) ? ' checked' : ''} aria-label="Use ${name}">
+      ${caseSvg(kind, id)}
+      <div class="cbody">
+        <div class="cname">${name}${nick ? ` <small>${nick}</small>` : ''}<span class="n">${plural(algLen(alg), 'move')}</span></div>
+        <div class="cpick">
+          <select aria-label="${name} algorithm">${opts}</select>
+          <input type="text" spellcheck="false" autocomplete="off" value="${alg}" aria-label="${name} moves">
+        </div>
+        <p class="err" hidden></p>
+      </div>
+    </div>`;
+  }
+
+  const algDlg = document.getElementById('alg-dlg');
+  const caseList = document.getElementById('case-list');
+  const algTab = document.getElementById('alg-tab');
+  let algKind = 'oll', algsChanged = false;
+  function renderAlgTabs() {
+    algTab.querySelectorAll('button').forEach(b => {
+      const k = b.dataset.kind;
+      b.setAttribute('aria-pressed', String(k === algKind));
+      b.textContent = `${k.toUpperCase()} · ${onCount(k)}/${CASES[k].length}`;
+    });
+  }
+  function renderCases() {
+    renderAlgTabs();
+    caseList.innerHTML = CASES[algKind].map(id => caseRow(algKind, id)).join('');
+    caseList.scrollTop = 0;
+  }
+  function openAlgDialog() {
+    algsChanged = false;
+    renderCases();
+    if (algDlg.showModal) algDlg.showModal(); else algDlg.setAttribute('open', '');
+  }
+  // New choices apply to the solution on screen right away
+  function algDialogClosed() {
+    renderAlgSummary();
+    if (!algsChanged) return;
+    algsChanged = false;
+    if (solEl.hidden) return;
+    if (sol && sol.flat && sol.pos > 0) solutionRewind(requestSolve); else requestSolve();
+  }
+  function closeAlgDialog() {
+    if (algDlg.close) algDlg.close(); else algDlg.removeAttribute('open');
+    algDialogClosed();
+  }
+  algDlg.addEventListener('close', algDialogClosed);     // Esc
+  document.addEventListener('click', e => { if (e.target.closest('[data-open-algs]')) openAlgDialog(); });
+  document.getElementById('alg-dlg-close').addEventListener('click', closeAlgDialog);
+  algDlg.addEventListener('click', e => { if (e.target === algDlg) closeAlgDialog(); });   // backdrop
+  algTab.addEventListener('click', e => {
+    const b = e.target.closest('button[data-kind]');
+    if (b && b.dataset.kind !== algKind) { algKind = b.dataset.kind; renderCases(); }
+  });
+  algDlg.querySelector('.dlg-tools .presets').addEventListener('click', e => {
+    const b = e.target.closest('button[data-preset]');
+    if (!b) return;
+    for (const id of CASES[algKind]) {
+      if (b.dataset.preset === 'all') setPref(algKind, id, { off: false });
+      else if (b.dataset.preset === '2look') setPref(algKind, id, { off: !TWO_LOOK[algKind].includes(id) });
+      else setPref(algKind, id, { alg: '' });
+    }
+    renderCases();
+  });
+
+  function updateCaseRow(row, kind, id) {
+    const alg = algOf(kind, id), sel = choicesFor(kind, id).indexOf(alg);
+    row.querySelector('select').value = sel < 0 ? 'custom' : String(sel);
+    row.querySelector('.n').textContent = plural(algLen(alg), 'move');
+  }
+  caseList.addEventListener('change', e => {
+    const row = e.target.closest('.case');
+    if (!row) return;
+    const id = row.dataset.id, t = e.target;
+    if (t.type === 'checkbox') {
+      setPref(algKind, id, { off: !t.checked });
+      row.classList.toggle('off', !t.checked);
+      renderAlgTabs();
+    } else if (t.tagName === 'SELECT') {
+      const input = row.querySelector('input[type="text"]');
+      if (t.value === 'custom') { input.focus(); input.select(); return; }
+      input.value = choicesFor(algKind, id)[Number(t.value)];
+      input.removeAttribute('aria-invalid');
+      row.querySelector('.err').hidden = true;
+      setPref(algKind, id, { alg: input.value });
+      updateCaseRow(row, algKind, id);
+    }
+  });
+  // Typed algorithms are saved once they parse and actually solve the case
+  let typeTimer;
+  caseList.addEventListener('input', e => {
+    const input = e.target;
+    if (input.type !== 'text') return;
+    clearTimeout(typeTimer);
+    typeTimer = setTimeout(() => {
+      const row = input.closest('.case'), id = row.dataset.id, err = row.querySelector('.err');
+      const fail = text => { err.textContent = text; err.hidden = false; input.setAttribute('aria-invalid', 'true'); };
+      let alg;
+      try { alg = parseAlg(input.value).map(m => m.name).join(' '); } catch (x) { fail(x.message + '.'); return; }
+      if (!alg) { fail('Type an algorithm.'); return; }
+      if (!libApi.checkCase(algKind, id, alg)) { fail(`This doesn't solve ${caseName(algKind, id)} from any angle. The saved algorithm is still used.`); return; }
+      err.hidden = true;
+      input.removeAttribute('aria-invalid');
+      setPref(algKind, id, { alg });
+      updateCaseRow(row, algKind, id);
+    }, 300);
+  });
+  renderAlgSummary();
 
   // ---------- pointer interaction ----------
   const raycaster = new THREE.Raycaster();
@@ -1855,24 +2234,26 @@ function CFOP_FACTORY() {
 
   // turn pad
   const pad = document.getElementById('pad');
-  const rows = [['U', 'D', 'L', 'R', 'F', 'B'], ['M', 'E', 'S', 'x', 'y', 'z']];
+  const rows = [['U', 'D', 'L', 'R', 'F', 'B'], ['u', 'd', 'l', 'r', 'f', 'b'], ['M', 'E', 'S', 'x', 'y', 'z']];
   rows.forEach((row, ri) => {
     for (const suf of ['', "'"]) {
       for (const k of row) {
+        const wide = 'udlrfb'.includes(k);
         const b = document.createElement('button');
         b.type = 'button';
         b.textContent = k + suf;
-        b.title = `Turn ${k + suf}`;
-        if (COLORS[k]) {
+        b.title = wide ? `Wide turn ${k + suf} (${k.toUpperCase()}w${suf}): two layers` : `Turn ${k + suf}`;
+        const col = COLORS[k] || (wide && COLORS[k.toUpperCase()]);
+        if (col) {
           const sw = document.createElement('span');
-          sw.className = 'sw'; sw.style.background = COLORS[k];
+          sw.className = wide ? 'sw w' : 'sw'; sw.style.background = col;
           b.appendChild(sw);
         }
         b.addEventListener('click', () => { if (drag.mode !== 'turn') doUser(makeMove(k, suf)); });
         pad.appendChild(b);
       }
     }
-    if (ri === 0) { const g = document.createElement('div'); g.className = 'gap'; pad.appendChild(g); }
+    if (ri < rows.length - 1) { const g = document.createElement('div'); g.className = 'gap'; pad.appendChild(g); }
   });
 
   document.getElementById('btn-scramble').addEventListener('click', scramble);
@@ -1914,7 +2295,12 @@ function CFOP_FACTORY() {
   applySpeed();
 
   const KEYMAP = { U: 'U', D: 'D', L: 'L', R: 'R', F: 'F', B: 'B', M: 'M', E: 'E', S: 'S', X: 'x', Y: 'y', Z: 'z' };
+  // W arms a wide turn: the next face key turns two layers (W then R = r, like Rw)
+  const wideChip = document.getElementById('wide-chip');
+  let wideArmed = false;
+  function setWide(on) { wideArmed = on; wideChip.hidden = !on; }
   window.addEventListener('keydown', e => {
+    if (algDlg.open) return;
     if (e.target.closest && e.target.closest('input, textarea, select')) return;
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') { e.preventDefault(); undo(); return; }
     if (e.ctrlKey || e.metaKey || e.altKey || e.repeat) return;
@@ -1922,8 +2308,15 @@ function CFOP_FACTORY() {
     const onButton = e.target.closest && e.target.closest('button');
     if (e.key === ' ' && !onButton) { e.preventDefault(); scramble(); return; }
     if (e.key === 'Enter' && !onButton) { e.preventDefault(); requestSolve(); return; }
+    if (e.key === 'Escape' && wideArmed) { setWide(false); return; }
+    if (e.key.toUpperCase() === 'W') { e.preventDefault(); setWide(!wideArmed); return; }
     const k = KEYMAP[e.key.toUpperCase()];
-    if (k && drag.mode !== 'turn') { e.preventDefault(); doUser(makeMove(k, e.shiftKey ? "'" : '')); }
+    if (k && drag.mode !== 'turn') {
+      e.preventDefault();
+      const key = wideArmed && 'UDLRFB'.includes(k) ? k.toLowerCase() : k;
+      setWide(false);
+      doUser(makeMove(key, e.shiftKey ? "'" : ''));
+    }
   });
 
   // ---------- loop ----------
