@@ -49,8 +49,15 @@ body { background: var(--bg); color: var(--fg); font-family: var(--font-ui); }
   inset: env(safe-area-inset-top, 0px) 0 env(safe-area-inset-bottom, 0px) 0;
   display: grid;
   grid-template-columns: minmax(0, 1fr) 340px;
+  grid-template-rows: minmax(0, 1fr);
+  grid-template-areas: "stage panel";
+}
+.app.with-sol {
+  grid-template-columns: 370px minmax(0, 1fr) 320px;
+  grid-template-areas: "sol stage panel";
 }
 .stage {
+  grid-area: stage;
   position: relative; min-width: 0; min-height: 0; overflow: hidden;
   background: radial-gradient(120% 90% at 50% 42%, var(--stage) 0%, var(--bg) 78%);
 }
@@ -104,12 +111,24 @@ body { background: var(--bg); color: var(--fg); font-family: var(--font-ui); }
 .scramble-moves span.on { color: var(--accent); opacity: 1; font-weight: 700; }
 .scramble-bar button { flex: none; font-size: 12px; padding: 5px 10px; }
 
-/* solution card */
-.solution { width: min(760px, 100%); padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; }
-.sol-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-.sol-head h3 { margin: 0; font: 700 15px/1.2 var(--font-ui); }
+/* solution column */
+.solpanel {
+  grid-area: sol; min-width: 0; min-height: 0;
+  background: var(--panel); border-right: 1px solid var(--line);
+  display: flex; flex-direction: column; gap: 14px;
+  padding: 20px 20px 16px;
+}
+.sol-head { display: flex; align-items: flex-start; gap: 10px; }
+.sol-head h2 { margin-bottom: 6px; }
+.sol-big { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.sol-big b { font: 700 34px/1 var(--font-ui); letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
 .sol-sum { color: var(--muted); font-size: 13px; font-variant-numeric: tabular-nums; }
-.sol-head .x { margin-left: auto; width: 30px; height: 30px; padding: 0; font-size: 18px; line-height: 1; border-radius: 50%; }
+.sol-head .x { margin-left: auto; flex: none; width: 32px; height: 32px; padding: 0; font-size: 18px; line-height: 1; border-radius: 50%; }
+.seg { display: grid; grid-template-columns: 1fr 1fr; padding: 3px; gap: 3px; background: var(--btn); border: 1px solid var(--line); border-radius: 10px; }
+.seg button { border: 0; background: transparent; font-weight: 600; padding: 7px 6px; border-radius: 7px; color: var(--muted); }
+.seg button[aria-pressed="true"] { background: var(--panel); color: var(--fg); box-shadow: 0 1px 3px rgba(0, 0, 0, .15); }
+.sol-note { margin: -4px 0 0; color: var(--muted); font-size: 12px; line-height: 1.5; }
+.mini { font: 600 11px/1 var(--font-ui); text-transform: uppercase; letter-spacing: .1em; color: var(--muted); margin: 0 0 7px; }
 .sol-colors { display: flex; flex-wrap: wrap; gap: 6px; }
 .sol-colors button {
   display: inline-flex; align-items: center; gap: 6px; padding: 4px 9px 4px 6px; border-radius: 999px;
@@ -120,19 +139,23 @@ body { background: var(--bg); color: var(--fg); font-family: var(--font-ui); }
 .sol-colors .dot { width: 12px; height: 12px; border-radius: 50%; box-shadow: inset 0 0 0 1px rgba(0,0,0,.25); }
 .sol-colors .best { font-family: var(--font-ui); font-size: 10px; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); font-weight: 700; }
 .sol-steps {
-  max-height: clamp(84px, calc(34vh - 70px), 280px); overflow-y: auto;
-  display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 4px 14px; align-items: baseline;
+  flex: 1; min-height: 0; overflow-y: auto; margin: 0 -8px; padding: 0 8px;
+  display: flex; flex-direction: column; gap: 4px;
 }
-.sol-steps .st { font: 600 12px/1.6 var(--font-ui); color: var(--muted); white-space: nowrap; }
-.sol-steps .st small { font-weight: 500; margin-left: 4px; font-variant-numeric: tabular-nums; }
-.sol-steps .st.cur { color: var(--accent); }
-.sol-steps .mv { display: flex; flex-wrap: wrap; gap: 0 9px; font: 500 15px/1.6 var(--font-mono); min-width: 0; }
+.stg { padding: 8px 10px; border-radius: 10px; border: 1px solid transparent; }
+.stg.cur { background: var(--accent-soft); border-color: var(--accent); }
+.stg .st { display: flex; align-items: baseline; gap: 6px; font: 600 13px/1.4 var(--font-ui); }
+.stg .st small { color: var(--muted); font-weight: 500; font-size: 12px; }
+.stg .st .n { margin-left: auto; color: var(--muted); font: 500 11px var(--font-mono); font-variant-numeric: tabular-nums; }
+.sol-steps .mv { display: flex; flex-wrap: wrap; gap: 0 10px; font: 500 17px/1.6 var(--font-mono); min-width: 0; margin-top: 2px; }
+.sol-steps .mv span.rot { font-style: italic; }
 .sol-steps .mv span { color: var(--muted); opacity: .6; border-radius: 4px; padding: 0 2px; }
 .sol-steps .mv span.done { color: var(--fg); opacity: 1; }
 .sol-steps .mv span.next { color: var(--accent); opacity: 1; font-weight: 700; box-shadow: inset 0 -2px 0 var(--accent); }
 .sol-steps .mv em { font-style: normal; color: var(--muted); font-family: var(--font-ui); font-size: 12px; }
-.sol-ctrl { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
-.sol-ctrl button { padding: 7px 12px; }
+.sol-ctrl { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; padding-top: 12px; border-top: 1px solid var(--line); }
+.sol-ctrl button { padding: 9px 14px; }
+.sol-ctrl button.primary { min-width: 84px; }
 .sol-ctrl .pos { margin-left: auto; color: var(--muted); font: 500 12px var(--font-mono); font-variant-numeric: tabular-nums; }
 .sol-msg { margin: 0; color: var(--muted); font-size: 13px; display: flex; align-items: center; gap: 10px; }
 .spinner { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--line); border-top-color: var(--accent); animation: spin .8s linear infinite; flex: none; }
@@ -163,6 +186,7 @@ body { background: var(--bg); color: var(--fg); font-family: var(--font-ui); }
 .toast.show { opacity: 1; transform: translate(-50%, 0); }
 
 .panel {
+  grid-area: panel;
   background: var(--panel); border-left: 1px solid var(--line);
   overflow-y: auto; min-height: 0;
   padding: 20px 20px 28px; display: flex; flex-direction: column; gap: 22px;
@@ -217,8 +241,19 @@ kbd {
   border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 4px; padding: 0 4px;
 }
 
+@media (max-width: 1180px) {
+  /* not enough room for three columns: the solution takes the side panel's place, on the left */
+  .app.with-sol { grid-template-columns: 340px minmax(0, 1fr); grid-template-areas: "sol stage"; }
+  .app.with-sol .panel { display: none; }
+}
 @media (max-width: 760px) {
-  .app { grid-template-columns: minmax(0, 1fr); grid-template-rows: 60% 40%; }
+  .app { grid-template-columns: minmax(0, 1fr); grid-template-rows: 60% 40%; grid-template-areas: "stage" "panel"; }
+  .app.with-sol { grid-template-columns: minmax(0, 1fr); grid-template-rows: 44% 56%; grid-template-areas: "stage" "sol"; }
+  .sol-note, #sol-colors-wrap .mini { display: none; }
+  .with-sol .scramble-bar { display: none; }
+  .solpanel { border-right: 0; border-top: 1px solid var(--line); padding: 12px 16px; gap: 10px; }
+  .sol-big b { font-size: 26px; }
+  .sol-steps .mv { font-size: 15px; }
   .panel { border-left: 0; border-top: 1px solid var(--line); padding: 16px 16px 24px; }
   .ov-top { padding-top: 12px; gap: 8px; }
   .scramble-bar { padding: 8px 10px; gap: 8px; }
@@ -228,9 +263,6 @@ kbd {
   .big-btn kbd { display: none; }
   .hint { display: none; }
   .ov-bottom { padding-bottom: 10px; }
-  .solution { padding: 10px 12px; gap: 8px; }
-  .sol-steps { max-height: clamp(72px, 16vh, 140px); }
-  .sol-steps .mv { font-size: 13px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .toast, button { transition: none; }
@@ -240,7 +272,34 @@ kbd {
 </head>
 <body>
 
-<div class="app">
+<div class="app" id="app">
+  <aside class="solpanel" id="solution" aria-label="CFOP solution" hidden>
+    <div class="sol-head">
+      <div>
+        <h2>CFOP solution</h2>
+        <div class="sol-big"><b id="sol-total">–</b><span class="sol-sum" id="sol-sum"></span></div>
+      </div>
+      <button type="button" class="x" id="sol-close" aria-label="Close solution" title="Close">×</button>
+    </div>
+    <div class="seg" id="sol-mode" role="group" aria-label="Solution style">
+      <button type="button" data-mode="human" aria-pressed="true">Human-style</button>
+      <button type="button" data-mode="fewest" aria-pressed="false">Fewest moves</button>
+    </div>
+    <p class="sol-note" id="sol-note"></p>
+    <p class="sol-msg" id="sol-msg" hidden></p>
+    <div id="sol-colors-wrap">
+      <p class="mini">Cross color</p>
+      <div class="sol-colors" id="sol-colors" role="group" aria-label="Cross color"></div>
+    </div>
+    <div class="sol-steps" id="sol-steps"></div>
+    <div class="sol-ctrl" id="sol-ctrl">
+      <button type="button" id="sol-prev" title="Undo one solution move">‹ Back</button>
+      <button type="button" class="primary" id="sol-play">Play</button>
+      <button type="button" id="sol-next" title="Do the next solution move">Step ›</button>
+      <span class="pos" id="sol-pos"></span>
+    </div>
+  </aside>
+
   <div class="stage" id="stage">
     <canvas id="gl" aria-label="3D Rubik's cube. Drag a face to turn it, drag the background to orbit."></canvas>
     <div class="overlay">
@@ -259,23 +318,6 @@ kbd {
 
       <div class="ov-bottom" id="ov-bottom">
         <div class="toast" id="toast" role="status"></div>
-
-        <div class="solution card" id="solution" hidden>
-          <div class="sol-head">
-            <h3>CFOP solution</h3>
-            <span class="sol-sum" id="sol-sum"></span>
-            <button type="button" class="x" id="sol-close" aria-label="Close solution" title="Close">×</button>
-          </div>
-          <p class="sol-msg" id="sol-msg" hidden></p>
-          <div class="sol-colors" id="sol-colors" role="group" aria-label="Cross color"></div>
-          <div class="sol-steps" id="sol-steps"></div>
-          <div class="sol-ctrl" id="sol-ctrl">
-            <button type="button" id="sol-prev" title="Undo one solution move">‹ Back</button>
-            <button type="button" class="primary" id="sol-play">Play</button>
-            <button type="button" id="sol-next" title="Do the next solution move">Step ›</button>
-            <span class="pos" id="sol-pos"></span>
-          </div>
-        </div>
 
         <div class="cta-row">
           <button type="button" class="big-btn" id="btn-scramble-big" title="Apply a random 22-move scramble (Space)">
@@ -726,7 +768,7 @@ function CFOP_FACTORY() {
   }
 
   // ---- stitching ----
-  const FACE_TOK = /^[UDRLFB](2|')?$/;
+  const FACE_TOK = /^[UDRLFBy](2|')?$/;   // y rotations merge too (y y -> y2)
   const amt = t => t.length === 1 ? 1 : t[1] === '2' ? 2 : 3;
   function mergeStages(stages) {
     const out = [];
@@ -740,6 +782,7 @@ function CFOP_FACTORY() {
     return stages.map((s, si) => ({ ...s, moves: out.filter(o => o.si === si).map(o => o.m) }));
   }
   const countMoves = toks => toks.filter(t => !/^[xyz]/.test(t)).length;
+  const countRots = toks => toks.filter(t => /^[xyz]/.test(t)).length;
 
   function solveFrom(colors, rotation) {
     const rc = rotation ? applyAlg(colors, [rotation]) : colors;
@@ -772,18 +815,125 @@ function CFOP_FACTORY() {
       const ll = solveLL(c);
       const { oll, pll } = ll;
       stages.push({ kind: 'oll', label: oll.num ? `OLL ${oll.num}` : 'OLL', note: oll.num ? (OLL_NAMES[oll.num] || '') : 'skip', moves: oll.moves });
-      stages.push({ kind: 'pll', label: pll.name ? 'PLL' : 'AUF', note: pll.name ? `${pll.name}-perm` : (pll.moves.length ? '' : 'skip'), moves: pll.moves });
+      stages.push({ kind: 'pll', label: pll.name || !pll.moves.length ? 'PLL' : 'AUF', note: pll.name ? `${pll.name}-perm` : (pll.moves.length ? 'already permuted' : 'skip'), moves: pll.moves });
       const merged = mergeStages(stages);
       const all = merged.flatMap(s => s.moves);
       const total = countMoves(all);
       if (!best || total < best.total) best = { merged, all, total };
     }
     if (!isSolved(applyAlg(colors, best.all))) throw new Error('Internal check failed');
-    return { color: crossColor, colorName: COLOR_NAMES[crossColor], stages: best.merged, total: best.total };
+    return { color: crossColor, colorName: COLOR_NAMES[crossColor], stages: best.merged,
+             total: best.total, rotations: countRots(best.all), score: best.total };
   }
   const CROSS_LIMIT = 6, LL_TRIES = 12;
 
-  function solveAll(stickers, progress) {
+  // ---- human-style F2L ----
+  // Turn the cube with y so the target pair sits in a front slot, then insert it with
+  // U, R, F, L only (no B, no D). Costs are in half-move units so R/U are preferred.
+  const HUMAN_COST = { U: 2, R: 2, F: 3, L: 3 };
+  const HUMAN_MOVES = ALL18.filter(m => HUMAN_COST[FACE_MOVES[m][0]]);
+  const MOVE_COST = new Int8Array(18);
+  for (const m of HUMAN_MOVES) {
+    const t = FACE_MOVES[m], base = HUMAN_COST[t[0]];
+    MOVE_COST[m] = base + (t.endsWith('2') ? (base > 2 ? 2 : 1) : 0);   // F2 / L2 are awkward
+  }
+  const Y_ROTS = ['', 'y', 'y2', "y'"], Y_COST = [0, 2, 3, 2];
+  const HUMAN_MAX_COST = 34, BEAM = 3, HUMAN_CROSSES = 2;
+
+  function wdfs(depth, g, bound, last, k, solved) {
+    nodes++;
+    const cur = STACK[depth];
+    const h = heuristic(cur, k, solved);
+    if (h === 0) return depth;
+    if (g + 2 * h > bound || depth >= MAXD) return -1;
+    const next = STACK[depth + 1];
+    for (const m of HUMAN_MOVES) {
+      const f = (m / 3) | 0;
+      if (f === last || ((f ^ 1) === last && f < last)) continue;
+      const g2 = g + MOVE_COST[m];
+      if (g2 > bound) continue;
+      step(cur, m, next);
+      PATH[depth] = m;
+      const r = wdfs(depth + 1, g2, bound, f, k, solved);
+      if (r >= 0) return r;
+    }
+    return -1;
+  }
+  function cheapestHumanPair(st, k, solved) {
+    for (let bound = 2 * heuristic(st, k, solved); bound <= HUMAN_MAX_COST; bound++) {
+      STACK[0].set(st);
+      const len = wdfs(0, 0, bound, -1, k, solved);
+      if (len >= 0) {
+        const path = Array.from(PATH.slice(0, len));
+        return { path, cost: path.reduce((c, m) => c + MOVE_COST[m], 0) };
+      }
+    }
+    return null;
+  }
+  const solvedPairs = st => [0, 1, 2, 3].filter(k => pairHome(st, k));
+  function humanF2L(colors) {
+    let beam = [{ colors, steps: [], cost: 0, done: solvedPairs(refsFromColors(colors)).length === 4 }];
+    for (let round = 0; round < 4 && beam.some(b => !b.done); round++) {
+      const next = [];
+      for (const b of beam) {
+        if (b.done) { next.push(b); continue; }
+        for (let r = 0; r < 4; r++) {
+          const rc = r ? applyAlg(b.colors, [Y_ROTS[r]]) : b.colors;
+          const st = refsFromColors(rc);
+          const solved = solvedPairs(st);
+          for (const k of [0, 1]) {                      // front-right, front-left
+            if (solved.includes(k)) continue;
+            const res = cheapestHumanPair(st, k, solved);
+            if (!res) continue;
+            const toks = res.path.map(m => FACE_MOVES[m]);
+            const nc = applyAlg(rc, toks);
+            next.push({
+              colors: nc,
+              steps: [...b.steps, { rot: Y_ROTS[r], slot: k, moves: toks }],
+              cost: b.cost + Y_COST[r] + res.cost,
+              done: solvedPairs(refsFromColors(nc)).length === 4,
+            });
+          }
+        }
+      }
+      if (!next.length) throw new Error('F2L search gave up');
+      next.sort((a, b) => a.cost - b.cost);
+      beam = next.slice(0, BEAM);
+    }
+    return beam[0];
+  }
+
+  function solveFromHuman(colors, rotation) {
+    const rc = rotation ? applyAlg(colors, [rotation]) : colors;
+    const crossColor = rc[CENTER['0,-1,0']];
+    let best = null;
+    for (const cross of allCrosses(refsFromColors(rc), HUMAN_CROSSES)) {
+      const crossToks = cross.path.map(m => FACE_MOVES[m]);
+      const f2l = humanF2L(applyAlg(rc, crossToks));
+      const stages = [];
+      if (rotation) stages.push({ kind: 'rot', label: 'Hold', note: `${COLOR_NAMES[crossColor]} on bottom`, moves: [rotation] });
+      stages.push({ kind: 'cross', label: 'Cross', moves: crossToks });
+      f2l.steps.forEach((s, i) => {
+        stages.push({ kind: 'f2l', label: `F2L ${i + 1}`, note: PAIRS[s.slot].name, moves: s.rot ? [s.rot, ...s.moves] : s.moves });
+      });
+      for (let n = f2l.steps.length; n < 4; n++) {
+        stages.push({ kind: 'f2l', label: `F2L ${n + 1}`, note: '', moves: [] });
+      }
+      const ll = solveLL(f2l.colors);
+      const { oll, pll } = ll;
+      stages.push({ kind: 'oll', label: oll.num ? `OLL ${oll.num}` : 'OLL', note: oll.num ? (OLL_NAMES[oll.num] || '') : 'skip', moves: oll.moves });
+      stages.push({ kind: 'pll', label: pll.name || !pll.moves.length ? 'PLL' : 'AUF', note: pll.name ? `${pll.name}-perm` : (pll.moves.length ? 'already permuted' : 'skip'), moves: pll.moves });
+      const merged = mergeStages(stages);
+      const all = merged.flatMap(s => s.moves);
+      const score = 2 * crossToks.length + f2l.cost + 2 * ll.len;
+      if (!best || score < best.score) best = { merged, all, score };
+    }
+    if (!isSolved(applyAlg(colors, best.all))) throw new Error('Internal check failed');
+    return { color: crossColor, colorName: COLOR_NAMES[crossColor], stages: best.merged,
+             total: countMoves(best.all), rotations: countRots(best.all), score: best.score };
+  }
+
+  function solveAll(stickers, progress, mode) {
     const colors = new Array(54);
     for (const s of stickers) {
       const n = [0, 0, 0]; n[s.axis] = s.sign;
@@ -797,23 +947,23 @@ function CFOP_FACTORY() {
     rotations.forEach((r, i) => {
       progress && progress({ phase: 'color', done: i, total: rotations.length });
       nodes = 0;
-      const res = solveFrom(colors, r);
+      const res = mode === 'fewest' ? solveFrom(colors, r) : solveFromHuman(colors, r);
       res.nodes = nodes;
       results.push(res);
     });
-    results.sort((a, b) => a.total - b.total);
+    results.sort((a, b) => a.score - b.score || a.total - b.total);
     return { solved: false, results };
   }
 
   // Solve a scramble given in notation, starting from a solved cube (used for self-tests)
-  function solveScramble(alg) {
+  function solveScramble(alg, mode) {
     const FACE = { '1,0,0': 'R', '-1,0,0': 'L', '0,1,0': 'U', '0,-1,0': 'D', '0,0,1': 'F', '0,0,-1': 'B' };
     const colors = applyAlg(SLOTS.map(s => FACE[PK(s.n)]), split(alg));
     const stickers = SLOTS.map((s, i) => {
       const axis = s.n.findIndex(v => v !== 0);
       return { p: s.p, axis, sign: s.n[axis], color: colors[i] };
     });
-    return solveAll(stickers);
+    return solveAll(stickers, null, mode);
   }
 
   return { solveAll, solveScramble };
@@ -1175,9 +1325,14 @@ function CFOP_FACTORY() {
   });
 
   // ---------- CFOP solution ----------
+  const appEl = document.getElementById('app');
   const solEl = document.getElementById('solution');
   const solMsg = document.getElementById('sol-msg');
+  const solTotal = document.getElementById('sol-total');
   const solSum = document.getElementById('sol-sum');
+  const solNote = document.getElementById('sol-note');
+  const solModeEl = document.getElementById('sol-mode');
+  const solColorsWrap = document.getElementById('sol-colors-wrap');
   const solColors = document.getElementById('sol-colors');
   const solSteps = document.getElementById('sol-steps');
   const solCtrl = document.getElementById('sol-ctrl');
@@ -1186,6 +1341,13 @@ function CFOP_FACTORY() {
   const solNext = document.getElementById('sol-next');
   const solPos = document.getElementById('sol-pos');
   const cfopBtn = document.getElementById('btn-cfop');
+
+  const MODE_NOTES = {
+    human: 'Turns the cube with y so each pair sits in a front slot, then inserts it with R, U, F and L. Longer, but it reads like real F2L.',
+    fewest: 'Shortest sequence the search found. Any face can turn and the cube is never rotated, so some steps are awkward to perform.',
+  };
+  let solMode = 'human';
+  try { solMode = localStorage.getItem('cfop-mode') === 'fewest' ? 'fewest' : 'human'; } catch (_) {}
 
   let sol = null;          // { results, active, result, flat: [{tok, stage}], pos, playing }
   let cubeVersion = 0;
@@ -1199,7 +1361,7 @@ function CFOP_FACTORY() {
         self.onmessage = e => {
           const id = e.data.id;
           try {
-            const res = api.solveAll(e.data.stickers, p => self.postMessage({ type: 'progress', id, p }));
+            const res = api.solveAll(e.data.stickers, p => self.postMessage({ type: 'progress', id, p }), e.data.mode);
             self.postMessage({ type: 'result', id, res });
           } catch (err) { self.postMessage({ type: 'error', id, message: String(err && err.message || err) }); }
         };`;
@@ -1210,19 +1372,25 @@ function CFOP_FACTORY() {
     return worker;
   }
   let localApi = null;
-  function solveLocally(id, data) {
+  function solveLocally(id, data, mode) {
     setTimeout(() => {
       try {
         localApi = localApi || CFOP_FACTORY();
-        const res = localApi.solveAll(data, () => {});
+        const res = localApi.solveAll(data, () => {}, mode);
         onSolverMessage({ type: 'result', id, res });
       } catch (err) { onSolverMessage({ type: 'error', id, message: String(err && err.message || err) }); }
     }, 30);
   }
 
+  function openSolPanel() {
+    if (!solEl.hidden) return;
+    solEl.hidden = false;
+    appEl.classList.add('with-sol');
+  }
   let solveWhenIdle = false;
   function requestSolve() {
     if (sol && sol.playing) return;
+    if (sol && sol.pos > 0) return;            // already part-way through this solution
     if (busy() || phase === 'scrambling') {
       // Solve as soon as the current turns finish
       solveWhenIdle = true;
@@ -1238,7 +1406,7 @@ function CFOP_FACTORY() {
     cfopBtn.disabled = true;
     const data = stickers();
     const w = getWorker();
-    if (w) w.postMessage({ id, stickers: data }); else solveLocally(id, data);
+    if (w) w.postMessage({ id, stickers: data, mode: solMode }); else solveLocally(id, data, solMode);
     requestSolve.version = cubeVersion;
   }
   function onSolverMessage(msg) {
@@ -1246,7 +1414,7 @@ function CFOP_FACTORY() {
     if (msg.type === 'progress') {
       const p = msg.p;
       if (p.phase === 'tables') showSolMessage('Building search tables (first time only)…', true);
-      else showSolMessage(`Searching cross colors · ${p.done + 1} of ${p.total}…`, true);
+      else showSolMessage(`Trying each cross color · ${p.done + 1} of ${p.total}…`, true);
       return;
     }
     cfopBtn.disabled = false;
@@ -1256,12 +1424,21 @@ function CFOP_FACTORY() {
     sol = { results: msg.res.results, active: 0, pos: 0, playing: false };
     selectResult(0);
   }
+  function renderMode() {
+    solModeEl.querySelectorAll('button').forEach(b => {
+      b.setAttribute('aria-pressed', String(b.dataset.mode === solMode));
+      b.disabled = !!(sol && sol.pos > 0);
+    });
+    solNote.textContent = MODE_NOTES[solMode];
+  }
   function showSolMessage(text, spinning) {
-    solEl.hidden = false;
+    openSolPanel();
+    renderMode();
     solMsg.hidden = false;
     solMsg.innerHTML = (spinning ? '<span class="spinner" aria-hidden="true"></span>' : '') + `<span>${text}</span>`;
+    solTotal.textContent = '–';
     solSum.textContent = '';
-    solColors.hidden = true; solSteps.hidden = true; solCtrl.hidden = true;
+    solColorsWrap.hidden = true; solSteps.hidden = true; solCtrl.hidden = true;
   }
   function selectResult(i) {
     sol.active = i;
@@ -1271,23 +1448,26 @@ function CFOP_FACTORY() {
     sol.pos = 0;
     renderSolution();
   }
+  const plural = (n, w) => `${n} ${w}${n === 1 ? '' : 's'}`;
   function renderSolution() {
     const r = sol.result;
+    renderMode();
     solMsg.hidden = true;
-    solColors.hidden = false; solSteps.hidden = false; solCtrl.hidden = false;
-    solSum.textContent = `${r.total} moves · ${r.colorName.toLowerCase()} cross`;
-    const bestTotal = sol.results[0].total;
+    solColorsWrap.hidden = false; solSteps.hidden = false; solCtrl.hidden = false;
+    solTotal.textContent = r.total;
+    solSum.textContent = `moves${r.rotations ? ` + ${plural(r.rotations, 'rotation')}` : ''} · ${r.colorName.toLowerCase()} cross`;
     solColors.innerHTML = sol.results.map((x, i) =>
-      `<button type="button" data-i="${i}" aria-pressed="${i === sol.active}" ${sol.pos > 0 ? 'disabled' : ''} title="${x.colorName} cross: ${x.total} moves">
-        <span class="dot" style="background:${COLORS[x.color]}"></span>${x.total}${x.total === bestTotal && i === 0 ? ' <span class="best">best</span>' : ''}
+      `<button type="button" data-i="${i}" aria-pressed="${i === sol.active}" title="${x.colorName} cross: ${x.total} moves${x.rotations ? `, ${plural(x.rotations, 'rotation')}` : ''}">
+        <span class="dot" style="background:${COLORS[x.color]}"></span>${x.total}${i === 0 ? ' <span class="best">best</span>' : ''}
       </button>`).join('');
     let gi = 0;
     solSteps.innerHTML = r.stages.map((s, si) => {
-      const label = `<div class="st" data-stage="${si}">${s.label}${s.note ? ` <small>${s.note}</small>` : ''}</div>`;
+      const n = s.moves.filter(t => !/^[xyz]/.test(t)).length;
+      const head = `<div class="st">${s.label}${s.note ? ` <small>${s.note}</small>` : ''}<span class="n">${n ? plural(n, 'move') : ''}</span></div>`;
       const moves = s.moves.length
-        ? s.moves.map(tok => `<span data-g="${gi++}">${tok}</span>`).join('')
-        : `<em>${s.kind === 'f2l' ? 'already solved, nothing to do' : 'skip, already done'}</em>`;
-      return label + `<div class="mv">${moves}</div>`;
+        ? s.moves.map(tok => `<span data-g="${gi++}"${/^[xyz]/.test(tok) ? ' class="rot" title="Rotate the whole cube"' : ''}>${tok}</span>`).join('')
+        : `<em>${s.kind === 'f2l' ? 'already solved, nothing to do' : 'nothing to do'}</em>`;
+      return `<div class="stg" data-stage="${si}">${head}<div class="mv">${moves}</div></div>`;
     }).join('');
     updateSolutionProgress();
   }
@@ -1300,15 +1480,16 @@ function CFOP_FACTORY() {
       el.classList.toggle('next', g === pos);
     });
     const curStage = pos < n ? sol.flat[pos].stage : -1;
-    solSteps.querySelectorAll('.st').forEach(el => el.classList.toggle('cur', Number(el.dataset.stage) === curStage));
-    const nextEl = solSteps.querySelector('span.next');
-    if (nextEl && nextEl.scrollIntoView) nextEl.scrollIntoView({ block: 'nearest' });
+    solSteps.querySelectorAll('.stg').forEach(el => el.classList.toggle('cur', Number(el.dataset.stage) === curStage));
+    const curEl = solSteps.querySelector('.stg.cur');
+    if (curEl && curEl.scrollIntoView) curEl.scrollIntoView({ block: 'nearest' });
     solPos.textContent = `${pos} / ${n}`;
     solPrev.disabled = pos === 0;
     solNext.disabled = pos >= n;
     solPlay.disabled = pos >= n;
     solPlay.textContent = sol.playing ? 'Pause' : pos >= n ? 'Done' : pos > 0 ? 'Resume' : 'Play';
     solColors.querySelectorAll('button').forEach(b => (b.disabled = pos > 0));
+    solModeEl.querySelectorAll('button').forEach(b => (b.disabled = pos > 0));
   }
   function solutionStep() {
     if (!sol || !sol.flat || busy() || sol.pos >= sol.flat.length) return false;
@@ -1355,13 +1536,14 @@ function CFOP_FACTORY() {
     pendingId++;
     cfopBtn.disabled = false;
     solEl.hidden = true;
+    appEl.classList.remove('with-sol');
   }
 
   solPlay.addEventListener('click', () => {
     if (!sol || !sol.flat) return;
     if (sol.playing) { sol.playing = false; updateSolutionProgress(); return; }
     sol.playing = true;
-    if (!solutionStep()) { /* a move is still animating; the next one follows when it lands */ }
+    solutionStep();   // if a move is still animating, the next one follows when it lands
     updateSolutionProgress();
   });
   solNext.addEventListener('click', () => { if (sol) { sol.playing = false; solutionStep(); updateSolutionProgress(); } });
@@ -1370,6 +1552,13 @@ function CFOP_FACTORY() {
   solColors.addEventListener('click', e => {
     const b = e.target.closest('button[data-i]');
     if (b && sol && sol.pos === 0) selectResult(Number(b.dataset.i));
+  });
+  solModeEl.addEventListener('click', e => {
+    const b = e.target.closest('button[data-mode]');
+    if (!b || b.dataset.mode === solMode || (sol && sol.pos > 0)) return;
+    solMode = b.dataset.mode;
+    try { localStorage.setItem('cfop-mode', solMode); } catch (_) {}
+    requestSolve();
   });
   cfopBtn.addEventListener('click', requestSolve);
 
