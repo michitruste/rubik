@@ -97,6 +97,14 @@ body { background: var(--bg); color: var(--fg); font-family: var(--font-ui); }
 }
 .chip[data-state="solved"] { background: var(--accent); color: var(--accent-fg); border-color: transparent; }
 .chip[data-state="scrambled"] { color: var(--warn); border-color: currentColor; }
+.chip[data-state="hold"] { background: var(--warn); color: var(--panel); border-color: transparent; }
+.chip[data-state="ready"], .chip[data-state="race"] { background: var(--accent); color: var(--accent-fg); border-color: transparent; }
+.stat.hold b { color: var(--warn); }
+.stat.ready b { color: var(--accent); }
+.sol-race { flex-basis: 100%; display: flex; gap: 10px; align-items: center; color: var(--muted); font-size: 12px; line-height: 1.45; }
+.sol-race button { flex: none; touch-action: none; user-select: none; -webkit-user-select: none; }
+#sol-race[data-state="hold"] { background: var(--warn); color: var(--panel); border-color: transparent; }
+#sol-race[data-state="ready"] { background: var(--accent); color: var(--accent-fg); border-color: transparent; }
 .stat {
   font: 500 13px/1 var(--font-mono); font-variant-numeric: tabular-nums;
   padding: 7px 10px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel);
@@ -300,6 +308,21 @@ button.link:hover { background: none; }
 .f2l-card .btns { display: flex; gap: 6px; margin-top: 8px; }
 .f2l-card .btns button { font-size: 12px; padding: 5px 10px; }
 .wide-btn + .wide-btn { margin-top: 6px; }
+.tstats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin-top: 9px; }
+.tstat { border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; min-width: 0; }
+.tstat span { display: block; font: 600 10px/1.3 var(--font-ui); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.tstat b { font: 500 14px/1.4 var(--font-mono); font-variant-numeric: tabular-nums; }
+.tlist { list-style: none; margin: 9px 0 6px; padding: 0; max-height: 230px; overflow-y: auto; font: 13px/1.4 var(--font-mono); font-variant-numeric: tabular-nums; }
+.tlist li { display: flex; align-items: center; gap: 6px; padding: 4px 0; border-bottom: 1px solid var(--line); }
+.tlist li:last-child { border-bottom: 0; }
+.tlist .i { color: var(--muted); min-width: 2em; }
+.tlist .pen { color: var(--warn); font-size: 11px; }
+.tlist small { color: var(--muted); font: 11px var(--font-ui); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.tlist small.won { color: var(--accent); }
+.tlist .act { margin-left: auto; display: flex; gap: 4px; flex: none; }
+.tlist .act button { font: 600 11px/1 var(--font-ui); padding: 4px 5px; }
+.tlist .act button[aria-pressed="true"] { color: var(--warn); border-color: currentColor; }
+.tlist .empty { color: var(--muted); font: 12px var(--font-ui); border: 0; }
 .case { display: grid; grid-template-columns: auto 64px minmax(0, 1fr); gap: 4px 14px; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--line); }
 .case:last-child { border-bottom: 0; }
 .case input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--accent); margin: 0; cursor: pointer; }
@@ -333,6 +356,7 @@ button.link:hover { background: none; }
   .sol-big b { font-size: 26px; }
   .sol-steps .mv { font-size: 15px; }
   .sol-ctrl .lg { display: none; }
+  .sol-race span { display: none; }
   .sol-ctrl button { padding: 9px 10px; }
   .sol-ctrl button.primary { min-width: 72px; }
   .panel { border-left: 0; border-top: 1px solid var(--line); padding: 16px 16px 24px; }
@@ -387,6 +411,10 @@ button.link:hover { background: none; }
       <button type="button" class="primary" id="sol-play">Play</button>
       <button type="button" id="sol-next" title="Play every move of the next step: Cross, F2L 1, … (→: one move)">Next<span class="lg"> step</span> ›</button>
       <span class="pos" id="sol-pos"></span>
+      <div class="sol-race">
+        <button type="button" id="sol-race" title="Hold, then release to start the race">⏱ Race</button>
+        <span>Hold <kbd>Space</kbd> or this button until the time turns green, release, then solve your real cube while the solution plays. Any key or tap stops your time.</span>
+      </div>
     </div>
   </aside>
 
@@ -398,6 +426,7 @@ button.link:hover { background: none; }
           <div class="chip" id="chip" data-state="solved">Solved</div>
           <div class="stat"><span>Moves</span><b id="moves">0</b></div>
           <div class="stat"><span>Time</span><b id="time">0:00.00</b></div>
+          <div class="stat" id="race-stat" hidden title="How long the CFOP solution took to play"><span>CFOP</span><b id="race-time">0:00.00</b></div>
           <div class="chip" id="wide-chip" data-state="wide" hidden title="The next face key turns two layers. Press W or Esc to cancel.">Wide</div>
         </div>
         <div class="scramble-bar card" id="scramble-bar" hidden>
@@ -414,10 +443,10 @@ button.link:hover { background: none; }
         <div class="toast" id="toast" role="status"></div>
 
         <div class="cta-row">
-          <button type="button" class="big-btn" id="btn-scramble-big" title="Apply a random 22-move scramble (Space)">
+          <button type="button" class="big-btn" id="btn-scramble-big" title="Apply a random 22-move scramble (S)">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 3h5v5"/><path d="M4 20 21 3"/><path d="M21 16v5h-5"/><path d="m15 15 6 6"/><path d="M4 4l5 5"/></svg>
             Scramble
-            <kbd>Space</kbd>
+            <kbd>S</kbd>
           </button>
           <button type="button" class="big-btn alt" id="btn-cfop" title="Find a CFOP solution for the current cube (Enter)">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 3 8l9 5 9-5-9-5Z"/><path d="m3 13 9 5 9-5"/></svg>
@@ -467,6 +496,17 @@ button.link:hover { background: none; }
     </section>
 
     <section>
+      <h2>Your times <output id="times-count">0</output></h2>
+      <div class="seg" id="times-kind" role="group" aria-label="Which times">
+        <button type="button" data-kind="race" aria-pressed="true" title="Your real-cube times from races against the CFOP solution">Races</button>
+        <button type="button" data-kind="cube" aria-pressed="false" title="Timed solves of the on-screen cube">Virtual cube</button>
+      </div>
+      <div class="tstats" id="tstats"></div>
+      <ol class="tlist" id="tlist"></ol>
+      <button type="button" class="link" id="times-clear" hidden>Clear these times</button>
+    </section>
+
+    <section>
       <h2>Turn speed <output id="speed-out">Normal</output></h2>
       <input type="range" id="speed" min="1" max="5" step="1" value="3" aria-label="Turn speed">
     </section>
@@ -485,11 +525,12 @@ button.link:hover { background: none; }
       <h2>Keyboard</h2>
       <p class="keys">
         <kbd>U</kbd> <kbd>D</kbd> <kbd>L</kbd> <kbd>R</kbd> <kbd>F</kbd> <kbd>B</kbd> face turns ·
-        <kbd>M</kbd> <kbd>E</kbd> <kbd>S</kbd> slices ·
+        <kbd>M</kbd> <kbd>E</kbd> slices (S is on the pad) ·
         <kbd>X</kbd> <kbd>Y</kbd> <kbd>Z</kbd> whole cube ·
         hold <kbd>Shift</kbd> for prime ·
         <kbd>W</kbd> then a face for a wide turn (r, u, f…) ·
-        <kbd>Space</kbd> scramble ·
+        <kbd>S</kbd> scramble ·
+        hold and release <kbd>Space</kbd> to race the CFOP solution, any key stops your time ·
         <kbd>Enter</kbd> CFOP solve ·
         <kbd>←</kbd> <kbd>→</kbd> one solution move ·
         <kbd>Backspace</kbd> undo
@@ -1503,12 +1544,14 @@ function CFOP_FACTORY() {
       if (phase === 'timing' && solved) {
         elapsed = performance.now() - t0;
         phase = 'free';
-        toast(`Solved in ${fmtTime(elapsed)} · ${moveCount} moves`);
+        const entry = recordTime({ kind: 'cube', ms: elapsed, moves: moveCount });
+        toast(`Solved in ${fmtTime(elapsed)} · ${moveCount} moves${entry.best ? ' · new best!' : ''}`);
       }
       if (solved && phase === 'inspect') phase = 'free';
       refresh(solved);
       if (done.kind === 'cfop' && solved && sol && sol.pos === sol.flat.length) {
-        toast(`Solved with CFOP · ${sol.result.total} moves`);
+        if (race && !race.done) raceCfopDone();
+        else toast(`Solved with CFOP · ${sol.result.total} moves`);
       }
     }
     if (done.kind === 'cfop' || done.kind === 'cfop-back') onSolutionMoveDone();
@@ -1807,12 +1850,13 @@ function CFOP_FACTORY() {
     const curEl = solSteps.querySelector('.stg.cur');
     if (curEl && curEl.scrollIntoView) curEl.scrollIntoView({ block: 'nearest' });
     solPos.textContent = `${pos} / ${n}`;
-    const rw = sol.rewinding;
+    const racing = !!(race && !race.done);
+    const rw = sol.rewinding || racing;
     solRestart.disabled = rw || pos === 0;
     solPrev.disabled = rw || pos === 0;
     solNext.disabled = rw || pos >= n;
     solPlay.disabled = rw || pos >= n;
-    solPlay.textContent = rw ? 'Rewinding…' : sol.playing ? 'Pause' : pos >= n ? 'Done' : pos > 0 ? 'Resume' : 'Play';
+    solPlay.textContent = racing ? 'Racing…' : sol.rewinding ? 'Rewinding…' : sol.playing ? 'Pause' : pos >= n ? 'Done' : pos > 0 ? 'Resume' : 'Play';
     solColors.querySelectorAll('button').forEach(b => (b.disabled = rw));
     solModeEl.querySelectorAll('button').forEach(b => (b.disabled = rw));
   }
@@ -1884,11 +1928,13 @@ function CFOP_FACTORY() {
     }
   }
   function invalidateSolution() {
+    cancelRace();
     cubeVersion++;
     if (solEl.hidden) return;
     closeSolution();
   }
   function closeSolution() {
+    cancelRace();
     if (sol) sol.playing = false;
     solveWhenIdle = false;
     sol = null;
@@ -1952,6 +1998,118 @@ function CFOP_FACTORY() {
     if (sol && sol.flat && sol.pos > 0) solutionRewind(switchMode); else switchMode();
   });
   cfopBtn.addEventListener('click', requestSolve);
+
+  // ---------- race: your real cube against the chosen CFOP solution ----------
+  // Hold Space (or the Race button) until the time turns green, release to start: the solution
+  // plays on screen while you solve a real cube with the same scramble. Any key or tap stops you.
+  const HOLD_MS = 400;
+  const raceStat = document.getElementById('race-stat');
+  const raceTimeEl = document.getElementById('race-time');
+  const timeStat = document.getElementById('time').parentElement;
+  const raceBtn = document.getElementById('sol-race');
+  let hold = null;     // { t, ready } while Space or the button is held down
+  let race = null;     // { t0, you, cfop, done } from the start until the next change to the cube
+
+  function raceBlocker() {
+    if (!sol || !sol.flat) return isSolved() ? 'Scramble first (S), then get a CFOP solution (Enter)' : 'Get a CFOP solution first (Enter)';
+    if (sol.rewinding || busy()) return 'Wait for the cube to stop turning';
+    return '';
+  }
+  function holdStart() {
+    if (hold || (race && !race.done)) return;
+    if (sol && sol.flat && sol.pos > 0 && !sol.rewinding) {
+      solutionRewind();
+      toast('Turning back to the scramble · then hold again');
+      return;
+    }
+    const why = raceBlocker();
+    if (why) { toast(why); return; }
+    hold = { t: performance.now(), ready: false };
+    renderHold();
+  }
+  function holdTick(now) {
+    if (hold && !hold.ready && now - hold.t >= HOLD_MS) { hold.ready = true; renderHold(); }
+  }
+  function holdEnd() {
+    if (!hold) return;
+    const ready = hold.ready;
+    hold = null;
+    renderHold();
+    if (ready && !raceBlocker()) startRace();
+  }
+  function renderHold() {
+    const st = hold ? (hold.ready ? 'ready' : 'hold') : '';
+    timeStat.classList.toggle('hold', st === 'hold');
+    timeStat.classList.toggle('ready', st === 'ready');
+    raceBtn.dataset.state = st;
+    if (st) setChip(st);
+    else if (!race || race.done) setChip(isSolved() ? 'solved' : 'scrambled');
+  }
+  function startRace() {
+    race = { t0: performance.now(), you: null, cfop: null, done: false };
+    phase = 'race';
+    raceStat.hidden = false;
+    if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+    setChip('race');
+    playTo(sol.flat.length);
+    updateSolutionProgress();
+  }
+  function raceYouDone() {
+    if (!race || race.done || race.you !== null) return;
+    race.you = performance.now() - race.t0;
+    race.entry = recordTime({ kind: 'race', ms: race.you, cfop: race.cfop, moves: sol && sol.result ? sol.result.total : null });
+    raceCheck();
+  }
+  function raceCfopDone() {
+    if (!race || race.done || race.cfop !== null) return;
+    race.cfop = performance.now() - race.t0;
+    if (race.entry) updateTime(race.entry, { cfop: race.cfop });
+    raceCheck();
+  }
+  function raceCheck() {
+    if (race.you === null) { toast(`CFOP finished in ${fmtTime(race.cfop)} · keep going!`); return; }
+    if (race.cfop === null) { toast(`Your time ${fmtTime(race.you)}${race.entry.best ? ' · new best!' : ''} · the solution is still playing`); return; }
+    race.done = true;
+    phase = 'free';
+    elapsed = race.you;
+    setChip(isSolved() ? 'solved' : 'scrambled');
+    const gap = (Math.abs(race.you - race.cfop) / 1000).toFixed(2);
+    const best = race.entry && race.entry.best ? ' · new best!' : '';
+    toast(race.you <= race.cfop ? `You win by ${gap} s · ${fmtTime(race.you)} vs ${fmtTime(race.cfop)}${best}`
+                                : `CFOP wins by ${gap} s · ${fmtTime(race.cfop)} vs ${fmtTime(race.you)}${best}`);
+    updateSolutionProgress();
+  }
+  function cancelRace() {
+    if (!race && !hold) return;
+    race = null;
+    hold = null;
+    raceStat.hidden = true;
+    if (phase === 'race') phase = 'free';
+    renderHold();
+  }
+  raceBtn.addEventListener('pointerdown', e => {
+    if (race && !race.done) return;                // the document handler stops your time
+    try { raceBtn.setPointerCapture(e.pointerId); } catch (_) {}
+    holdStart();
+  });
+  raceBtn.addEventListener('pointerup', holdEnd);
+  raceBtn.addEventListener('pointercancel', () => { hold = null; renderHold(); });
+  // While the race runs, a tap anywhere only stops your time (it never presses what is under it)
+  let swallowClick = false;
+  document.addEventListener('pointerdown', e => {
+    swallowClick = false;
+    if (!race || race.done) return;
+    e.preventDefault();
+    e.stopPropagation();
+    swallowClick = true;
+    raceYouDone();
+  }, true);
+  document.addEventListener('click', e => {
+    if (!swallowClick) return;
+    swallowClick = false;
+    e.preventDefault();
+    e.stopPropagation();
+  }, true);
 
   // ---------- OLL / PLL algorithm choices ----------
   const libApi = CFOP_FACTORY();     // case checks and diagrams; also the solver when Workers are unavailable
@@ -2513,8 +2671,9 @@ function CFOP_FACTORY() {
     return `${m}:${(s - m * 60).toFixed(2).padStart(5, '0')}`;
   }
   function setChip(state) {
+    if (race && !race.done && state !== 'hold' && state !== 'ready') state = 'race';
     chipEl.dataset.state = state;
-    chipEl.textContent = { solved: 'Solved', scrambled: 'Scrambled', turning: 'Turning…' }[state];
+    chipEl.textContent = { solved: 'Solved', scrambled: 'Scrambled', turning: 'Turning…', hold: 'Hold…', ready: 'Release to start', race: 'Racing' }[state];
   }
   let toastTimer;
   function toast(msg) {
@@ -2533,6 +2692,121 @@ function CFOP_FACTORY() {
     histEl.innerHTML = history.map(h => `<span class="${h.kind === 'scramble' ? 's' : ''}">${h.move.name}</span>`).join('');
     histEl.scrollTop = histEl.scrollHeight;
   }
+
+  // ---------- your times: saved in this browser, with best single and averages ----------
+  // Races (your real cube vs the CFOP solution) and virtual-cube solves are kept apart.
+  // ao5 / ao12 drop the best and worst time (WCA style); ao3 is the plain mean of 3.
+  // +2 adds two seconds, DNF counts as the worst time; an average with too many DNFs is a DNF.
+  const TIMES_KEY = 'rubik-times-v1';
+  const tstatsEl = document.getElementById('tstats');
+  const tlistEl = document.getElementById('tlist');
+  const timesCountEl = document.getElementById('times-count');
+  const timesKindEl = document.getElementById('times-kind');
+  const timesClearBtn = document.getElementById('times-clear');
+  let times = [];          // oldest first: { id, kind, ms, pen: '' | '+2' | 'dnf', cfop, moves, scramble, date }
+  let timesKind = 'race';
+  try {
+    const saved = JSON.parse(localStorage.getItem(TIMES_KEY) || '[]');
+    if (Array.isArray(saved)) times = saved.filter(t => t && typeof t.ms === 'number' && (t.kind === 'race' || t.kind === 'cube'));
+  } catch (_) {}
+  const saveTimes = () => { try { localStorage.setItem(TIMES_KEY, JSON.stringify(times.slice(-3000))); } catch (_) {} };
+  const valueOf = t => t.pen === 'dnf' ? Infinity : t.ms + (t.pen === '+2' ? 2000 : 0);
+  const fmtVal = v => v === null ? '–' : v === Infinity ? 'DNF' : fmtTime(v);
+  const ofKind = kind => times.filter(t => t.kind === kind);
+  function average(vals) {             // vals: the n values of one average
+    const n = vals.length, v = vals.slice().sort((a, b) => a - b);
+    const trim = n >= 5 ? Math.ceil(n * 0.05) : 0;
+    const kept = v.slice(trim, n - trim);
+    return kept.includes(Infinity) ? Infinity : kept.reduce((a, b) => a + b, 0) / kept.length;
+  }
+  const currentAvg = (vals, n) => vals.length < n ? null : average(vals.slice(-n));
+  function bestAvg(vals, n) {
+    let best = null;
+    for (let i = n; i <= vals.length; i++) {
+      const a = average(vals.slice(i - n, i));
+      if (best === null || a < best) best = a;
+    }
+    return best;
+  }
+  function recordTime({ kind, ms, cfop = null, moves = null }) {
+    const prev = ofKind(kind).map(valueOf).filter(v => v !== Infinity);
+    const entry = { id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), kind, ms: Math.round(ms), pen: '',
+                    cfop: cfop === null ? null : Math.round(cfop), moves, scramble: scrambleText || '', date: new Date().toISOString() };
+    times.push(entry);
+    saveTimes();
+    timesKind = kind;
+    renderTimes();
+    return { ...entry, best: prev.length > 0 && ms < Math.min(...prev) };
+  }
+  function updateTime(ref, patch) {
+    const t = times.find(x => x.id === ref.id);
+    if (!t) return;
+    Object.assign(t, patch);
+    if (typeof patch.cfop === 'number') t.cfop = Math.round(patch.cfop);
+    saveTimes();
+    renderTimes();
+  }
+  function renderTimes() {
+    const list = ofKind(timesKind), vals = list.map(valueOf);
+    timesKindEl.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.kind === timesKind)));
+    timesCountEl.textContent = list.length;
+    const ok = vals.filter(v => v !== Infinity);
+    const stats = [
+      ['Best', ok.length ? Math.min(...ok) : null],
+      ['ao3', currentAvg(vals, 3)], ['ao5', currentAvg(vals, 5)], ['ao12', currentAvg(vals, 12)],
+      ['Best ao5', vals.length >= 5 ? bestAvg(vals, 5) : null], ['Best ao12', vals.length >= 12 ? bestAvg(vals, 12) : null],
+      ['Mean', ok.length ? ok.reduce((a, b) => a + b, 0) / ok.length : null],
+    ];
+    let extra = '';
+    if (timesKind === 'race') {
+      const raced = list.filter(t => t.cfop !== null);
+      const won = raced.filter(t => valueOf(t) <= t.cfop).length;
+      extra = `<div class="tstat" title="Races where your time beat the CFOP solution"><span>Won</span><b>${raced.length ? `${won} / ${raced.length}` : '–'}</b></div>`;
+    } else {
+      const withMoves = list.filter(t => t.moves);
+      extra = `<div class="tstat" title="Average number of moves per solve"><span>Avg moves</span><b>${withMoves.length ? Math.round(withMoves.reduce((a, t) => a + t.moves, 0) / withMoves.length) : '–'}</b></div>`;
+    }
+    tstatsEl.innerHTML = stats.map(([k, v]) => `<div class="tstat"><span>${k}</span><b>${fmtVal(v)}</b></div>`).join('') + extra;
+    timesClearBtn.hidden = !list.length;
+    if (!list.length) {
+      tlistEl.innerHTML = `<li class="empty">${timesKind === 'race'
+        ? 'No races yet. Scramble, get a CFOP solution, then hold and release Space.'
+        : 'No timed solves yet. Scramble, then solve the cube on screen; the timer starts with your first turn.'}</li>`;
+      return;
+    }
+    tlistEl.innerHTML = list.map((t, i) => [t, i]).reverse().slice(0, 300).map(([t, i]) => {
+      const vs = t.kind === 'race' && t.cfop !== null
+        ? `<small class="${valueOf(t) <= t.cfop ? 'won' : ''}">vs ${fmtTime(t.cfop)}</small>` : t.moves ? `<small>${t.moves} moves</small>` : '';
+      const tip = `${new Date(t.date).toLocaleString()}${t.scramble ? ` · ${t.scramble}` : ''}`;
+      return `<li data-id="${t.id}" title="${tip}"><span class="i">${i + 1}.</span><b>${fmtVal(valueOf(t))}</b>${t.pen === '+2' ? '<span class="pen">+2</span>' : ''}${vs}
+        <span class="act">
+          <button type="button" data-pen="+2" aria-pressed="${t.pen === '+2'}" title="Two-second penalty">+2</button>
+          <button type="button" data-pen="dnf" aria-pressed="${t.pen === 'dnf'}" title="Did not finish">DNF</button>
+          <button type="button" data-del title="Delete this time" aria-label="Delete this time">×</button>
+        </span></li>`;
+    }).join('');
+  }
+  tlistEl.addEventListener('click', e => {
+    const li = e.target.closest('li[data-id]'), b = e.target.closest('button');
+    if (!li || !b) return;
+    const t = times.find(x => x.id === li.dataset.id);
+    if (!t) return;
+    if (b.hasAttribute('data-del')) times = times.filter(x => x !== t);
+    else t.pen = t.pen === b.dataset.pen ? '' : b.dataset.pen;
+    saveTimes();
+    renderTimes();
+  });
+  timesKindEl.addEventListener('click', e => {
+    const b = e.target.closest('button[data-kind]');
+    if (b && b.dataset.kind !== timesKind) { timesKind = b.dataset.kind; renderTimes(); }
+  });
+  timesClearBtn.addEventListener('click', () => {
+    const n = ofKind(timesKind).length;
+    if (!confirm(`Delete all ${n} ${timesKind === 'race' ? 'race' : 'virtual-cube'} times? This can't be undone.`)) return;
+    times = times.filter(t => t.kind !== timesKind);
+    saveTimes();
+    renderTimes();
+  });
 
   function drawNet() {
     const w = netEl.clientWidth;
@@ -2648,19 +2922,21 @@ function CFOP_FACTORY() {
   speedEl.addEventListener('input', applySpeed);
   applySpeed();
 
-  const KEYMAP = { U: 'U', D: 'D', L: 'L', R: 'R', F: 'F', B: 'B', M: 'M', E: 'E', S: 'S', X: 'x', Y: 'y', Z: 'z' };
+  const KEYMAP = { U: 'U', D: 'D', L: 'L', R: 'R', F: 'F', B: 'B', M: 'M', E: 'E', X: 'x', Y: 'y', Z: 'z' };
   // W arms a wide turn: the next face key turns two layers (W then R = r, like Rw)
   const wideChip = document.getElementById('wide-chip');
   let wideArmed = false;
   function setWide(on) { wideArmed = on; wideChip.hidden = !on; }
   window.addEventListener('keydown', e => {
     if (algDlg.open || f2lDlg.open) return;
+    if (race && !race.done) { e.preventDefault(); raceYouDone(); return; }   // any key stops your time
     if (e.target.closest && e.target.closest('input, textarea, select')) return;
+    if (e.key === ' ') { e.preventDefault(); if (!e.repeat) holdStart(); return; }
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') { e.preventDefault(); undo(); return; }
     if (e.ctrlKey || e.metaKey || e.altKey || e.repeat) return;
     if (e.key === 'Backspace') { e.preventDefault(); undo(); return; }
     const onButton = e.target.closest && e.target.closest('button');
-    if (e.key === ' ' && !onButton) { e.preventDefault(); scramble(); return; }
+    if (e.key.toLowerCase() === 's') { e.preventDefault(); setWide(false); scramble(); return; }
     if (e.key === 'Enter' && !onButton) { e.preventDefault(); requestSolve(); return; }
     if ((e.key === 'ArrowRight' || e.key === 'ArrowLeft') && sol && sol.flat) {
       e.preventDefault();
@@ -2678,10 +2954,21 @@ function CFOP_FACTORY() {
     }
   });
 
+  window.addEventListener('keyup', e => {
+    if (e.key !== ' ' || algDlg.open || f2lDlg.open) return;
+    if (e.target.closest && e.target.closest('input, textarea, select')) return;
+    e.preventDefault();          // Space belongs to the race timer, never to a focused button
+    holdEnd();
+  });
+
   // ---------- loop ----------
   function frame(now) {
     stepAnim(now);
-    if (phase === 'timing') timeEl.textContent = fmtTime(now - t0);
+    holdTick(now);
+    if (race) {
+      timeEl.textContent = fmtTime(race.you !== null ? race.you : now - race.t0);
+      raceTimeEl.textContent = fmtTime(race.cfop !== null ? race.cfop : now - race.t0);
+    } else if (phase === 'timing') timeEl.textContent = fmtTime(now - t0);
     else if (phase === 'inspect' || phase === 'scrambling') timeEl.textContent = fmtTime(0);
     else timeEl.textContent = fmtTime(elapsed);
     updateCamera();
@@ -2690,6 +2977,7 @@ function CFOP_FACTORY() {
   }
 
   build();
+  renderTimes();
   resize();
   measureBands();
   renderHistory();
