@@ -169,7 +169,8 @@ body { background: var(--bg); color: var(--fg); font-family: var(--font-ui); }
 .sol-steps .mv span.done { color: var(--fg); opacity: 1; }
 .sol-steps .mv span.next { color: var(--accent); opacity: 1; font-weight: 700; box-shadow: inset 0 -2px 0 var(--accent); }
 .stg.has-case { display: grid; grid-template-columns: minmax(0, 1fr) 48px; gap: 10px; align-items: start; }
-.case-pic svg { width: 48px; height: 48px; display: block; }
+.case-pic svg { width: 48px; height: auto; display: block; }
+.sol-steps .hid { display: block; font-style: normal; color: var(--muted); font-size: 12px; margin-top: 2px; }
 .sol-steps .mv em { font-style: normal; color: var(--muted); font-family: var(--font-ui); font-size: 12px; }
 .sol-ctrl { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; padding-top: 12px; border-top: 1px solid var(--line); }
 .sol-ctrl button { padding: 9px 12px; }
@@ -271,6 +272,7 @@ button.link:hover { background: none; }
   width: min(780px, calc(100vw - 32px)); max-height: calc(100dvh - 48px);
   padding: 0; border: 1px solid var(--line); border-radius: 14px;
   background: var(--panel); color: var(--fg); box-shadow: 0 24px 60px rgba(0, 0, 0, .3);
+  overflow: hidden;
 }
 .algdlg[open] { display: flex; flex-direction: column; }
 .algdlg::backdrop { background: rgba(8, 10, 14, .5); }
@@ -285,6 +287,19 @@ button.link:hover { background: none; }
 .io-msg { flex-basis: 100%; margin: 0; font-size: 12px; color: var(--muted); }
 .io-msg.bad { color: var(--warn); }
 .case-list { overflow-y: auto; min-height: 0; padding: 4px 20px 20px; }
+.f2ldlg { width: min(1060px, calc(100vw - 32px)); }
+.f2ldlg .dlg-tools .seg { width: min(340px, 100%); }
+.f2l-group h3 { font: 600 13px/1.3 var(--font-ui); margin: 18px 0 10px; display: flex; gap: 8px; align-items: baseline; }
+.f2l-group h3 small { color: var(--muted); font: 500 12px var(--font-mono); }
+.f2l-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 10px; }
+.f2l-card { display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 12px; align-items: start; padding: 12px; border: 1px solid var(--line); border-radius: 12px; }
+.f2l-card svg { display: block; }
+.f2l-card .cname { margin-bottom: 4px; }
+.f2l-card .main-alg { font: 600 15px/1.45 var(--font-mono); }
+.f2l-card .alt-alg { font: 12px/1.5 var(--font-mono); color: var(--muted); }
+.f2l-card .btns { display: flex; gap: 6px; margin-top: 8px; }
+.f2l-card .btns button { font-size: 12px; padding: 5px 10px; }
+.wide-btn + .wide-btn { margin-top: 6px; }
 .case { display: grid; grid-template-columns: auto 64px minmax(0, 1fr); gap: 4px 14px; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--line); }
 .case:last-child { border-bottom: 0; }
 .case input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--accent); margin: 0; cursor: pointer; }
@@ -359,7 +374,7 @@ button.link:hover { background: none; }
       <button type="button" data-mode="fewest" aria-pressed="false">Fewest moves</button>
     </div>
     <p class="sol-note" id="sol-note"></p>
-    <p class="sol-algs">Last layer: <span id="sol-alg-sum"></span> · <button type="button" class="link" data-open-algs>change</button></p>
+    <p class="sol-algs">Last layer: <span id="sol-alg-sum"></span> · <button type="button" class="link" data-open-algs>change</button> · <button type="button" class="link" data-open-f2l>F2L cases</button></p>
     <p class="sol-msg" id="sol-msg" hidden></p>
     <div id="sol-colors-wrap">
       <p class="mini">Cross color</p>
@@ -445,10 +460,10 @@ button.link:hover { background: none; }
       <div class="presets" id="presets"></div>
     </section>
 
-
     <section>
       <h2>CFOP algorithms <output id="alg-sum"></output></h2>
       <button type="button" class="wide-btn" data-open-algs>Choose OLL &amp; PLL algorithms…</button>
+      <button type="button" class="wide-btn" data-open-f2l>Learn the 41 F2L cases…</button>
     </section>
 
     <section>
@@ -509,6 +524,23 @@ button.link:hover { background: none; }
     <p class="io-msg" id="alg-io-msg" role="status" hidden></p>
   </div>
   <div class="case-list" id="case-list"></div>
+</dialog>
+
+<dialog class="algdlg f2ldlg" id="f2l-dlg" aria-labelledby="f2l-dlg-title">
+  <div class="dlg-head">
+    <div>
+      <h2 id="f2l-dlg-title">F2L cases</h2>
+      <p class="sol-note">Every way a corner and its edge can sit while the cross and the other pairs are solved. Each picture shows the cube from the slot's corner with the white cross underneath; only the pair and the centers are colored. <b>Set up</b> puts the case on the cube, <b>Watch</b> also plays the first algorithm.</p>
+    </div>
+    <button type="button" class="x" id="f2l-dlg-close" aria-label="Close" title="Close">×</button>
+  </div>
+  <div class="dlg-tools">
+    <div class="seg" id="f2l-side" role="group" aria-label="Slot">
+      <button type="button" data-side="right" aria-pressed="true">Front-right slot</button>
+      <button type="button" data-side="left" aria-pressed="false">Front-left (mirrored)</button>
+    </div>
+  </div>
+  <div class="case-list" id="f2l-list"></div>
 </dialog>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -874,7 +906,7 @@ function CFOP_FACTORY() {
       const hits = [], next = new Map();
       for (const node of frontier) for (const alg of algs) for (let a = 0; a < 4; a++) {
         const moves = a ? [AUF[a], ...alg.toks] : alg.toks;
-        const item = { c: applyP(node.c, alg.pre[a]), looks: [...node.looks, { id: alg.id, moves, before: node.c }], len: node.len + moves.length };
+        const item = { c: applyP(node.c, alg.pre[a]), looks: [...node.looks, { id: alg.id, moves }], len: node.len + moves.length };
         if (done(item)) hits.push(item);
         else if (d < MAX_LOOKS) {
           const k = key(item.c), old = next.get(k);
@@ -927,15 +959,62 @@ function CFOP_FACTORY() {
   function llStages({ oll, pll }) {
     const out = [];
     if (!oll.looks.length) out.push({ kind: 'oll', label: 'OLL', note: 'skip', moves: [] });
-    oll.looks.forEach((l, i, a) => out.push({ kind: 'oll', label: `OLL ${l.id}`, note: lookNote(OLL_NAMES[l.id] || '', i, a.length), moves: l.moves, view: llView(l.before) }));
+    oll.looks.forEach((l, i, a) => out.push({ kind: 'oll', label: `OLL ${l.id}`, note: lookNote(OLL_NAMES[l.id] || '', i, a.length), moves: l.moves }));
     if (!pll.looks.length) {
       out.push({ kind: 'pll', label: pll.moves.length ? 'AUF' : 'PLL', note: pll.moves.length ? 'already permuted' : 'skip', moves: pll.moves });
     }
     pll.looks.forEach((l, i, a) => out.push({
-      kind: 'pll', label: 'PLL', note: lookNote(`${l.id}-perm`, i, a.length), view: llView(l.before),
+      kind: 'pll', label: 'PLL', note: lookNote(`${l.id}-perm`, i, a.length),
       moves: i === a.length - 1 && pll.post ? [...l.moves, pll.post] : l.moves,
     }));
     return out;
+  }
+
+  // ---- step diagrams: how the cube looks at the start of each step ----
+  const slotName = (x, z) => PAIRS.find(pr => pr.c[0] === x && pr.c[2] === z).name;
+  // F2L: the stickers on the three faces seen from the target slot's corner (top, and the two
+  // sides that meet at the slot). The pair's own stickers and the centers are marked `hi`.
+  function f2lView(c, k) {
+    const [sx, , sz] = PAIRS[k].c;
+    const home = n => c[CENTER[PK(n)]];
+    const want = {
+      corner: [home([sx, 0, 0]), home([0, -1, 0]), home([0, 0, sz])].sort().join(''),
+      edge: [home([sx, 0, 0]), home([0, 0, sz])].sort().join(''),
+    };
+    const hi = new Set(), at = {};
+    for (const [key, group] of CUBIE) {
+      const set = group.map(i => c[i]).sort().join('');
+      for (const piece in want) if (set === want[piece] && group.length === (piece === 'corner' ? 3 : 2)) {
+        group.forEach(i => hi.add(i));
+        at[piece] = key.split(',').map(Number);
+      }
+    }
+    const seen = i => { const n = SLOTS[i].n; return n[1] === 1 || n[0] === sx || n[2] === sz; };
+    const cells = [];
+    SLOTS.forEach((s, i) => { if (seen(i)) cells.push({ p: s.p, n: s.n, c: c[i], hi: hi.has(i) || CUBIE.get(PK(s.p)).length === 1 }); });
+    // pieces the picture can't show
+    const hidden = [];
+    for (const piece of ['corner', 'edge']) {
+      const p = at[piece];
+      if (!p || CUBIE.get(PK(p)).some(seen)) continue;
+      hidden.push(p[1] === -1 && piece === 'edge' ? 'edge in the bottom layer' : `${piece} in the ${slotName(p[0], p[2])} slot`);
+    }
+    return { kind: 'f2l', slot: [sx, sz], cells, hidden };
+  }
+  // Walk the final (merged) moves so every picture matches the cube at the start of its step.
+  // F2L steps are pictured after their leading rotation, the way the cube is then held.
+  function addViews(colors, stages) {
+    let c = colors;
+    for (const s of stages) {
+      let i = 0;
+      if (s.kind === 'f2l') while (i < s.moves.length && /^[xyz]/.test(s.moves[i])) i++;
+      if (s.moves.length > i) {
+        const start = i ? applyAlg(c, s.moves.slice(0, i)) : c;
+        if (s.kind === 'f2l' && s.slot !== undefined) s.view = f2lView(start, s.slot);
+        else if (s.kind === 'oll' || s.kind === 'pll') s.view = { kind: 'll', cells: llView(start) };
+      }
+      c = applyAlg(c, s.moves);
+    }
   }
 
   // ---- algorithm library helpers (for the picker UI) ----
@@ -1003,7 +1082,7 @@ function CFOP_FACTORY() {
       if (rotation) stages.push({ kind: 'rot', label: 'Hold', note: `${COLOR_NAMES[crossColor]} on bottom`, moves: [rotation] });
       stages.push({ kind: 'cross', label: 'Cross', moves: cand.cross.path.map(m => FACE_MOVES[m]) });
       cand.f2l.steps.forEach((p, i) => {
-        stages.push({ kind: 'f2l', label: `F2L ${i + 1}`, note: PAIRS[p.slot].name, moves: p.path.map(m => FACE_MOVES[m]) });
+        stages.push({ kind: 'f2l', label: `F2L ${i + 1}`, note: PAIRS[p.slot].name, slot: p.slot, moves: p.path.map(m => FACE_MOVES[m]) });
       });
       // pairs that were already in place, or dropped in while solving another pair
       for (let k = 0, n = cand.f2l.steps.length; k < 4; k++) {
@@ -1018,6 +1097,7 @@ function CFOP_FACTORY() {
       if (!best || total < best.total) best = { merged, all, total };
     }
     if (!isSolved(applyAlg(colors, best.all))) throw new Error('Internal check failed');
+    addViews(colors, best.merged);
     return { color: crossColor, colorName: COLOR_NAMES[crossColor], stages: best.merged,
              total: best.total, rotations: countRots(best.all), score: best.total };
   }
@@ -1110,7 +1190,7 @@ function CFOP_FACTORY() {
       if (rotation) stages.push({ kind: 'rot', label: 'Hold', note: `${COLOR_NAMES[crossColor]} on bottom`, moves: [rotation] });
       stages.push({ kind: 'cross', label: 'Cross', moves: crossToks });
       f2l.steps.forEach((s, i) => {
-        stages.push({ kind: 'f2l', label: `F2L ${i + 1}`, note: PAIRS[s.slot].name, moves: s.rot ? [s.rot, ...s.moves] : s.moves });
+        stages.push({ kind: 'f2l', label: `F2L ${i + 1}`, note: PAIRS[s.slot].name, slot: s.slot, moves: s.rot ? [s.rot, ...s.moves] : s.moves });
       });
       for (let n = f2l.steps.length; n < 4; n++) {
         stages.push({ kind: 'f2l', label: `F2L ${n + 1}`, note: '', moves: [] });
@@ -1123,6 +1203,7 @@ function CFOP_FACTORY() {
       if (!best || score < best.score) best = { merged, all, score };
     }
     if (!isSolved(applyAlg(colors, best.all))) throw new Error('Internal check failed');
+    addViews(colors, best.merged);
     return { color: crossColor, colorName: COLOR_NAMES[crossColor], stages: best.merged,
              total: countMoves(best.all), rotations: countRots(best.all), score: best.score };
   }
@@ -1160,7 +1241,10 @@ function CFOP_FACTORY() {
     return solveAll(stickers, null, mode, algs);
   }
 
-  return { solveAll, solveScramble, checkCase, caseView, library: { OLL, PLL, OLL_NAMES } };
+  // F2L picture of the state a setup sequence gives from solved, for pair k (0 = front-right)
+  const f2lCase = (setup, k) => f2lView(applyAlg(SOLVED, split(setup)), k);
+
+  return { solveAll, solveScramble, checkCase, caseView, f2lCase, library: { OLL, PLL, OLL_NAMES } };
 }
 </script>
 
@@ -1701,8 +1785,12 @@ function CFOP_FACTORY() {
         ? s.moves.map(tok => `<span data-g="${gi++}"${/^[xyz]/.test(tok) ? ' class="rot" title="Rotate the whole cube"' : ''}>${tok}</span>`).join('')
         : `<em>${s.kind === 'f2l' ? 'already solved, nothing to do' : 'nothing to do'}</em>`;
       if (!s.view) return `<div class="stg" data-stage="${si}">${head}<div class="mv">${moves}</div></div>`;
-      const pic = `<span class="case-pic" title="The top layer before this step, held as the solution says">${llSvg(s.view, s.kind)}</span>`;
-      return `<div class="stg has-case" data-stage="${si}"><div>${head}<div class="mv">${moves}</div></div>${pic}</div>`;
+      const f2l = s.view.kind === 'f2l';
+      const pic = f2l
+        ? `<span class="case-pic" title="The pair to insert, seen from its slot's corner">${f2lSvg(s.view)}</span>`
+        : `<span class="case-pic" title="The top layer before this step, held as the solution says">${llSvg(s.view.cells, s.kind)}</span>`;
+      const hid = f2l && s.view.hidden.length ? `<em class="hid">Out of sight: ${s.view.hidden.join(', ')}</em>` : '';
+      return `<div class="stg has-case" data-stage="${si}"><div>${head}<div class="mv">${moves}</div>${hid}</div>${pic}</div>`;
     }).join('');
     updateSolutionProgress();
   }
@@ -1966,6 +2054,29 @@ function CFOP_FACTORY() {
     });
     return `<svg viewBox="0 0 64 64" aria-hidden="true"><rect x="9" y="9" width="44" height="44" rx="4" fill="#15171c"/>${rects.join('')}</svg>`;
   }
+  // F2L picture: the cube in isometric view from the target slot's corner (top, and the two sides
+  // meeting at the slot). Only the pair and the centers are colored.
+  function f2lSvg({ slot: [sx, sz], cells }, size = 48) {
+    // turn about y so the slot is drawn front-right
+    const turn = sx === 1 && sz === 1 ? (x, z) => [x, z] : sx === -1 && sz === 1 ? (x, z) => [z, -x]
+      : sx === 1 ? (x, z) => [-z, x] : (x, z) => [-x, -z];
+    const S = 10, iso = ([x, y, z]) => `${((x - z) * 0.866 * S).toFixed(1)},${(((x + z) * 0.5 - y) * S).toFixed(1)}`;
+    const quad = (center, axis, a) => {
+      const [u, v] = [0, 1, 2].filter(i => i !== axis);
+      return [[-a, -a], [a, -a], [a, a], [-a, a]].map(([du, dv]) => {
+        const q = center.slice(); q[u] += du; q[v] += dv; return iso(q);
+      }).join(' ');
+    };
+    const faces = [[[0, 1.5, 0], 1], [[1.5, 0, 0], 0], [[0, 0, 1.5], 2]]
+      .map(([ctr, ax]) => `<polygon points="${quad(ctr, ax, 1.5)}" fill="#15171c"/>`);
+    const stickers = cells.map(({ p, n, c, hi }) => {
+      const [x, z] = turn(p[0], p[2]), [nx, nz] = turn(n[0], n[2]);
+      const nn = [nx, n[1], nz], axis = nn.findIndex(v => v !== 0);
+      const ctr = [x, p[1], z]; ctr[axis] = 1.5 * nn[axis];
+      return `<polygon points="${quad(ctr, axis, 0.42)}" fill="${hi ? COLORS[c] : 'var(--case-off)'}"/>`;
+    });
+    return `<svg viewBox="-27 -31 54 62" width="${size}" height="${Math.round(size * 62 / 54)}" aria-hidden="true">${faces.join('')}${stickers.join('')}</svg>`;
+  }
   const caseSvg = (kind, id) => llSvg(libApi.caseView(kind, id), kind, COLORS.D);   // picker: yellow top by convention
   const caseName = (kind, id) => kind === 'oll' ? `OLL ${id}` : `${id}-perm`;
   function caseRow(kind, id) {
@@ -2136,6 +2247,134 @@ function CFOP_FACTORY() {
     }, 300);
   });
   renderAlgSummary();
+
+  // ---------- F2L case sheet ----------
+  // The 41 cases for the front-right slot, found by the solver's F2L search. Where a well-known
+  // algorithm exists it comes first; every algorithm of a case starts from the same picture.
+  const F2L_CASES = [
+    ['side', "U' F' U F", "y' U' R' U R"],
+    ['side', "R U R'"],
+    ['side', "U R U' R'"],
+    ['side', "F' U' F", "y' R' U' R"],
+    ['side', "U' R U' R' U R U R'"],
+    ['side', "R U' R' U2 F' U' F"],
+    ['side', "R' U2 R2 U R2 U R", "R U' R' U R U' R' U2 R U' R'"],
+    ['side', "U' R U R' U R U R'", "U2 R U' R' U' R U R'"],
+    ['side', "R U2 R' U F' U' F"],
+    ['side', "y' U R' U R U' R' U' R", "U F' U F U' F' U' F"],
+    ['side', "F' U F U2 R U R'", "R U R' U2 R U' R' U R U' R'", "U' R' U2 R' U R' U' R U2 R"],
+    ['side', "d R' U' R U' R' U' R", "U' R U' R' d R' U' R", "U' R U' R' U F' U' F"],
+    ['side', "U' R U R' U2 R U' R'"],
+    ['side', "U' R U2 R' U2 R U' R'"],
+    ['side', "d R' U2 R U2 R' U R", "y' U R' U2 R U2 R' U R", "U' F' R' U' F' U F R F"],
+    ['side', "y' U R' U' R U2 R' U R", "R' U' R F R' F' U R"],
+    ['up', "y' R' U R U2 R' U' R", "y' U2 R' U' R U' R' U R", "U2 R U R' F' U' F"],
+    ['up', "y' U' R' U2 R U' R' U R", "U' F' U2 F2 R' F' R"],
+    ['up', "R U2 R' U' R U R'"],
+    ['up', "y' R' U2 R U R' U' R", "F' U2 F U F' U' F"],
+    ['up', "U2 R2 U2 R' U' R U' R2", "R U R' U2 R U R' U' R U R'"],
+    ['up', "U R U2 R2 F R F'", "U R U2 R' U R U' R'"],
+    ['up', "R U' R' U2 R U R'", "U2 R U R' U R U' R'"],
+    ['up', "y' R' U' R U2 R' U' R U R' U' R", "U' R' F R F' U' F' U' F"],
+    ['eslot', "R U' R' d R' U R", "U' R' F R F' R U' R'", "U' F' U2 F R U R'"],
+    ['eslot', "U' R U2 R' U R U R'", "U R U R' U2 R U R'", "y' U R' U R U2 R' U R"],
+    ['eslot', "d R' U' R d' R U R'", "U F' U' F U' R U R'", "U2 F' U F U R U R'"],
+    ['eslot', "U' R U' R' U2 R U' R'"],
+    ['eslot', "U' R U R' d R' U' R", "U2 R U R' U' F' U F"],
+    ['eslot', "R U R' U' R U R' U' R U R'", "U R U' R' U R U' R' U R U' R'", "U' F R' F' R U' R U R'"],
+    ['cslot', "R U R' U' R U R'", "U2 F' U F R U R'"],
+    ['cslot', "R U2 R' F' U2 F"],
+    ['cslot', "R U' R' F' U' F"],
+    ['cslot', "U' F' U F U R U' R'", "U' R' F R F' R U R'", "R' U' R' U' R' U R U R"],
+    ['cslot', "U R U' R' U' F' U F", "U R U' R' F R' F' R", "U R U R' U' F' U' F"],
+    ['cslot', "R U' R' U R U' R'"],
+    ['both', "R U2 R U R' U R U2 R2", "R U' R' U R U2 R' U R U' R'", "R U R' U2 R U' R' U R U R'"],
+    ['both', "R U R' U' R U' R' U2 F' U' F", "R U F R U R' U' F' R'"],
+    ['both', "R2 U2 F R2 F' U2 R' U R'", "R U' R' d R' U2 R U2 R' U R", "R U2 R' U R U2 R' U F' U' F"],
+    ['both', "R U R' U' R U2 R' U' R U R'", "R U' R' U' R U R' U2 R U' R'", "R2 U2 R' U' R U' R' U2 R'"],
+    ['both', "R F U R U' R' F' U' R'"],
+  ];
+  const F2L_GROUPS = {
+    side: 'Both pieces on top, white sticker facing sideways',
+    up: 'Both pieces on top, white sticker facing up',
+    eslot: 'Corner on top, edge in the slot',
+    cslot: 'Corner in the slot, edge on top',
+    both: 'Both pieces in the slot',
+  };
+  const invToks = toks => toks.slice().reverse().map(t => t.endsWith("'") ? t.slice(0, -1) : t.endsWith('2') ? t : t + "'");
+  // Left-right mirror: R <-> L, every turn reversed (x keeps its direction)
+  function mirrorTok(t) {
+    const m = /^([A-Za-z])(w?)(2|')?$/.exec(t);
+    const face = { R: 'L', L: 'R', r: 'l', l: 'r' }[m[1]] || m[1];
+    const suf = m[3] === '2' ? '2' : m[1] === 'x' ? (m[3] || '') : m[3] ? '' : "'";
+    return face + m[2] + suf;
+  }
+  const f2lDlg = document.getElementById('f2l-dlg');
+  const f2lList = document.getElementById('f2l-list');
+  const f2lSideEl = document.getElementById('f2l-side');
+  let f2lSide = 'right';
+  try { if (localStorage.getItem('f2l-side') === 'left') f2lSide = 'left'; } catch (_) {}
+  const f2lAlgs = i => {
+    const algs = F2L_CASES[i].slice(1);
+    return f2lSide === 'left' ? algs.map(a => a.split(' ').map(mirrorTok).join(' ')) : algs;
+  };
+  // From solved: white cross to the bottom (z2), then undo the first algorithm
+  const f2lSetup = i => ['z2', ...invToks(f2lAlgs(i)[0].split(' '))];
+  function f2lCard(i) {
+    const [main, ...alts] = f2lAlgs(i);
+    const pic = f2lSvg(libApi.f2lCase(f2lSetup(i).join(' '), f2lSide === 'left' ? 1 : 0), 64);
+    return `<div class="f2l-card" data-i="${i}">${pic}<div>
+      <div class="cname">Case ${i + 1}<span class="n">${plural(algLen(main), 'move')}</span></div>
+      <div class="main-alg">${main}</div>
+      ${alts.map(a => `<div class="alt-alg">${a}</div>`).join('')}
+      <div class="btns">
+        <button type="button" data-act="setup" title="Put this case on the cube">Set up</button>
+        <button type="button" data-act="watch" title="Put this case on the cube and play the first algorithm">Watch</button>
+      </div>
+    </div></div>`;
+  }
+  function renderF2L() {
+    f2lSideEl.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.side === f2lSide)));
+    f2lList.innerHTML = Object.entries(F2L_GROUPS).map(([g, title]) => {
+      const idx = F2L_CASES.map((_, i) => i).filter(i => F2L_CASES[i][0] === g);
+      return `<section class="f2l-group"><h3>${title} <small>${idx.length}</small></h3><div class="f2l-grid">${idx.map(f2lCard).join('')}</div></section>`;
+    }).join('');
+  }
+  function openF2L() {
+    renderF2L();
+    f2lList.scrollTop = 0;
+    if (f2lDlg.showModal) f2lDlg.showModal(); else f2lDlg.setAttribute('open', '');
+  }
+  const closeF2L = () => { if (f2lDlg.close) f2lDlg.close(); else f2lDlg.removeAttribute('open'); };
+  function setUpF2L(i, watch) {
+    if (drag.mode === 'turn') return;
+    closeF2L();
+    reset();
+    applyScramble(f2lSetup(i), 0.35);
+    if (watch) {
+      for (const tok of f2lAlgs(i)[0].split(' ')) {
+        const m = moveFromToken(tok);
+        history.push({ move: m, kind: 'user' });
+        enqueue(m, 'user');
+      }
+      renderHistory();
+    }
+    toast(`F2L case ${i + 1}${watch ? ` · ${f2lAlgs(i)[0]}` : ' is on the cube'}`);
+  }
+  document.addEventListener('click', e => { if (e.target.closest('[data-open-f2l]')) openF2L(); });
+  document.getElementById('f2l-dlg-close').addEventListener('click', closeF2L);
+  f2lDlg.addEventListener('click', e => { if (e.target === f2lDlg) closeF2L(); });   // backdrop
+  f2lSideEl.addEventListener('click', e => {
+    const b = e.target.closest('button[data-side]');
+    if (!b || b.dataset.side === f2lSide) return;
+    f2lSide = b.dataset.side;
+    try { localStorage.setItem('f2l-side', f2lSide); } catch (_) {}
+    renderF2L();
+  });
+  f2lList.addEventListener('click', e => {
+    const b = e.target.closest('button[data-act]');
+    if (b) setUpF2L(Number(b.closest('.f2l-card').dataset.i), b.dataset.act === 'watch');
+  });
 
   // ---------- pointer interaction ----------
   const raycaster = new THREE.Raycaster();
@@ -2415,7 +2654,7 @@ function CFOP_FACTORY() {
   let wideArmed = false;
   function setWide(on) { wideArmed = on; wideChip.hidden = !on; }
   window.addEventListener('keydown', e => {
-    if (algDlg.open) return;
+    if (algDlg.open || f2lDlg.open) return;
     if (e.target.closest && e.target.closest('input, textarea, select')) return;
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') { e.preventDefault(); undo(); return; }
     if (e.ctrlKey || e.metaKey || e.altKey || e.repeat) return;
