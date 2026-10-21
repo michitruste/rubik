@@ -12,7 +12,7 @@
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Rubik's Cube Lab">
 <meta property="og:title" content="Rubik's Cube Lab">
-<meta property="og:description" content="Interactive 3D Rubik's cube in the browser: scramble it, turn it, and watch a step-by-step CFOP solution.">
+<meta property="og:description" content="Interactive 3D Rubik's cube in the browser: scramble it, get a step-by-step CFOP solution, and race it with your real cube.">
 <meta property="og:url" content="https://michitruste.github.io/rubik/">
 <meta property="og:image" content="https://michitruste.github.io/rubik/og-image.png">
 <meta property="og:image:width" content="1200">
@@ -63,12 +63,8 @@ body { background: var(--bg); color: var(--fg); font-family: var(--font-ui); }
   position: fixed;
   inset: env(safe-area-inset-top, 0px) 0 env(safe-area-inset-bottom, 0px) 0;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 340px;
-  grid-template-rows: minmax(0, 1fr);
-  grid-template-areas: "stage panel";
-}
-.app.with-sol {
   grid-template-columns: 370px minmax(0, 1fr) 320px;
+  grid-template-rows: minmax(0, 1fr);
   grid-template-areas: "sol stage panel";
 }
 .stage {
@@ -77,7 +73,6 @@ body { background: var(--bg); color: var(--fg); font-family: var(--font-ui); }
   background: radial-gradient(120% 90% at 50% 42%, var(--stage) 0%, var(--bg) 78%);
 }
 #gl { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; cursor: grab; }
-#gl.on-cube { cursor: pointer; }
 #gl.dragging { cursor: grabbing; }
 
 .overlay {
@@ -198,11 +193,8 @@ body { background: var(--bg); color: var(--fg); font-family: var(--font-ui); }
   box-shadow: 0 10px 28px rgba(0, 0, 0, .22);
 }
 .big-btn:hover { background: var(--accent); filter: brightness(1.08); }
-.big-btn.alt { background: var(--fg); color: var(--bg); }
-.big-btn.alt:hover { background: var(--fg); }
 .big-btn:disabled { opacity: .6; cursor: progress; filter: none; }
 .big-btn kbd { background: rgba(255, 255, 255, .2); color: inherit; border-color: rgba(0, 0, 0, .15); font-size: 11px; }
-.big-btn.alt kbd { background: transparent; border-color: currentColor; opacity: .7; }
 .hint { color: var(--muted); font-size: 12px; text-align: center; text-wrap: balance; }
 .toast {
   position: absolute; left: 50%; bottom: calc(100% + 8px); transform: translate(-50%, -8px); opacity: 0;
@@ -239,18 +231,7 @@ button.primary:hover { filter: brightness(1.08); }
 button:disabled { cursor: not-allowed; opacity: .5; }
 
 .actions { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
-.pad { display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px; }
-.pad button { font: 500 14px/1 var(--font-mono); padding: 8px 0 6px; }
-.pad .sw { display: block; width: 14px; height: 4px; margin: 5px auto 0; border-radius: 2px; box-shadow: inset 0 0 0 1px rgba(0,0,0,.18); }
-.pad .gap { grid-column: 1 / -1; height: 4px; }
-.pad .sw.w { height: 7px; }
 
-.alg { display: flex; gap: 6px; }
-.alg input {
-  flex: 1; min-width: 0; font: 14px var(--font-mono); color: var(--fg); background: var(--bg);
-  border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px;
-}
-.alg button { padding: 8px 14px; }
 .presets { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 9px; }
 .presets button { font-size: 12px; padding: 5px 10px; border-radius: 999px; }
 .err { color: var(--warn); font-size: 12px; margin: 7px 0 0; }
@@ -269,7 +250,6 @@ kbd {
   border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 4px; padding: 0 4px;
 }
 
-.chip[data-state="wide"] { background: var(--accent-soft); color: var(--accent); border-color: var(--accent); }
 .wide-btn { width: 100%; padding: 9px 10px; }
 .sol-algs { margin: -6px 0 0; color: var(--muted); font-size: 12px; }
 button.link { background: none; border: 0; padding: 0; color: var(--accent); font-size: 12px; text-decoration: underline; text-underline-offset: 2px; }
@@ -342,8 +322,14 @@ button.link:hover { background: none; }
 .cpick input[aria-invalid="true"] { border-color: var(--warn); }
 .case .err { margin: 5px 0 0; }
 
+@media (min-width: 1181px) {
+  /* the solution column stays open, so there is nothing to close */
+  .sol-head .x { display: none; }
+}
 @media (max-width: 1180px) {
-  /* not enough room for three columns: the solution takes the side panel's place, on the left */
+  /* not enough room for three columns: the solution takes the side panel's place, on the left, while it is in use */
+  .app { grid-template-columns: minmax(0, 1fr) 340px; grid-template-areas: "stage panel"; }
+  .app:not(.with-sol) .solpanel { display: none; }
   .app.with-sol { grid-template-columns: 340px minmax(0, 1fr); grid-template-areas: "sol stage"; }
   .app.with-sol .panel { display: none; }
 }
@@ -385,7 +371,7 @@ button.link:hover { background: none; }
 <body>
 
 <div class="app" id="app">
-  <aside class="solpanel" id="solution" aria-label="CFOP solution" hidden>
+  <aside class="solpanel" id="solution" aria-label="CFOP solution">
     <div class="sol-head">
       <div>
         <h2>CFOP solution</h2>
@@ -419,15 +405,13 @@ button.link:hover { background: none; }
   </aside>
 
   <div class="stage" id="stage">
-    <canvas id="gl" aria-label="3D Rubik's cube. Drag a face to turn it, drag the background to orbit."></canvas>
+    <canvas id="gl" aria-label="3D Rubik's cube. Drag to orbit, scroll or pinch to zoom."></canvas>
     <div class="overlay">
       <div class="ov-top" id="ov-top">
         <div class="hud">
           <div class="chip" id="chip" data-state="solved">Solved</div>
-          <div class="stat"><span>Moves</span><b id="moves">0</b></div>
           <div class="stat"><span>Time</span><b id="time">0:00.00</b></div>
           <div class="stat" id="race-stat" hidden title="How long the CFOP solution took to play"><span>CFOP</span><b id="race-time">0:00.00</b></div>
-          <div class="chip" id="wide-chip" data-state="wide" hidden title="The next face key turns two layers. Press W or Esc to cancel.">Wide</div>
         </div>
         <div class="scramble-bar card" id="scramble-bar" hidden>
           <span class="lbl">Scramble</span>
@@ -448,13 +432,8 @@ button.link:hover { background: none; }
             Scramble
             <kbd>S</kbd>
           </button>
-          <button type="button" class="big-btn alt" id="btn-cfop" title="Find a CFOP solution for the current cube (Enter)">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 3 8l9 5 9-5-9-5Z"/><path d="m3 13 9 5 9-5"/></svg>
-            Solve with CFOP
-            <kbd>Enter</kbd>
-          </button>
         </div>
-        <div class="hint">Drag a face to turn it · drag the background to orbit · scroll or pinch to zoom</div>
+        <div class="hint">The CFOP solution appears when the scramble finishes · drag to orbit · scroll or pinch to zoom</div>
       </div>
     </div>
   </div>
@@ -475,32 +454,13 @@ button.link:hover { background: none; }
     </section>
 
     <section>
-      <h2>Turns</h2>
-      <div class="pad" id="pad"></div>
-    </section>
-
-    <section>
-      <h2>Algorithm</h2>
-      <form class="alg" id="alg-form">
-        <input id="alg-input" type="text" spellcheck="false" autocomplete="off" placeholder="R U R' U' r f'" aria-label="Algorithm in Singmaster notation">
-        <button type="submit" class="primary">Play</button>
-      </form>
-      <p class="err" id="alg-err" hidden></p>
-      <div class="presets" id="presets"></div>
-    </section>
-
-    <section>
       <h2>CFOP algorithms <output id="alg-sum"></output></h2>
       <button type="button" class="wide-btn" data-open-algs>Choose OLL &amp; PLL algorithms…</button>
       <button type="button" class="wide-btn" data-open-f2l>Learn the 41 F2L cases…</button>
     </section>
 
     <section>
-      <h2>Your times <output id="times-count">0</output></h2>
-      <div class="seg" id="times-kind" role="group" aria-label="Which times">
-        <button type="button" data-kind="race" aria-pressed="true" title="Your real-cube times from races against the CFOP solution">Races</button>
-        <button type="button" data-kind="cube" aria-pressed="false" title="Timed solves of the on-screen cube">Virtual cube</button>
-      </div>
+      <h2>Your times vs CFOP <output id="times-count">0</output></h2>
       <div class="tstats" id="tstats"></div>
       <ol class="tlist" id="tlist"></ol>
       <button type="button" class="link" id="times-clear" hidden>Clear these times</button>
@@ -524,14 +484,8 @@ button.link:hover { background: none; }
     <section>
       <h2>Keyboard</h2>
       <p class="keys">
-        <kbd>U</kbd> <kbd>D</kbd> <kbd>L</kbd> <kbd>R</kbd> <kbd>F</kbd> <kbd>B</kbd> face turns ·
-        <kbd>M</kbd> <kbd>E</kbd> slices (S is on the pad) ·
-        <kbd>X</kbd> <kbd>Y</kbd> <kbd>Z</kbd> whole cube ·
-        hold <kbd>Shift</kbd> for prime ·
-        <kbd>W</kbd> then a face for a wide turn (r, u, f…) ·
         <kbd>S</kbd> scramble ·
         hold and release <kbd>Space</kbd> to race the CFOP solution, any key stops your time ·
-        <kbd>Enter</kbd> CFOP solve ·
         <kbd>←</kbd> <kbd>→</kbd> one solution move ·
         <kbd>Backspace</kbd> undo
       </p>
@@ -1311,14 +1265,6 @@ function CFOP_FACTORY() {
     f: { axis: 2, layers: [0, 1], dir: -1 }, b: { axis: 2, layers: [-1, 0], dir: 1 },
   };
   const SPEEDS = { 1: [460, 'Slow'], 2: [320, 'Relaxed'], 3: [210, 'Normal'], 4: [130, 'Fast'], 5: [70, 'Instant-ish'] };
-  const PRESETS = [
-    ['Sexy move', "R U R' U'"],
-    ['Sune', "R U R' U R U2 R'"],
-    ['T-perm', "R U R' U' R' F R2 U' R' U' R U R' F'"],
-    ['Checkerboard', 'M2 E2 S2'],
-    ['Superflip', "U R2 F B R B2 R U2 L B2 R U' D' R2 F R' L B2 U2 F2"],
-    ['Cube in a cube', "F L F U' R U F2 L2 U' L' B D' B' L2 U"],
-  ];
 
   // ---------- moves ----------
   function makeMove(key, suffix, label) {
@@ -1392,19 +1338,17 @@ function CFOP_FACTORY() {
     stickerMats[f.name] = new THREE.MeshStandardMaterial({ color: c, roughness: 0.32, metalness: 0 });
   }
 
-  let cubies = [], bodies = [];
+  let cubies = [];
   function build() {
     for (const c of cubies) c.parent && c.parent.remove(c);
     pivot.rotation.set(0, 0, 0);
-    cubies = []; bodies = [];
+    cubies = [];
     for (let x = -1; x <= 1; x++) for (let y = -1; y <= 1; y++) for (let z = -1; z <= 1; z++) {
       if (!x && !y && !z) continue;
       const pos = [x, y, z];
       const g = new THREE.Group();
       g.position.set(x, y, z);
-      const body = new THREE.Mesh(bodyGeo, bodyMat);
-      body.userData.cubie = g;
-      g.add(body); bodies.push(body);
+      g.add(new THREE.Mesh(bodyGeo, bodyMat));
       for (const f of FACES) {
         if (pos[f.axis] !== f.sign) continue;
         const n = new THREE.Vector3(); n.setComponent(f.axis, f.sign);
@@ -1504,13 +1448,13 @@ function CFOP_FACTORY() {
   let anim = null;
   let speedMs = SPEEDS[3][0];
   let history = [];
-  let phase = 'free'; // free | scrambling | inspect | timing
-  let moveCount = 0, t0 = 0, elapsed = 0;
+  let phase = 'free'; // free | scrambling | inspect | race
+  let elapsed = 0;
 
   const ease = t => t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
 
   function enqueue(move, kind, factor = 1, idx = -1) { queue.push({ move, kind, factor, idx }); }
-  function busy() { return !!anim || queue.length > 0 || drag.mode === 'turn'; }
+  function busy() { return !!anim || queue.length > 0; }
 
   function startNext() {
     const { move, kind, factor, idx } = queue.shift();
@@ -1520,7 +1464,7 @@ function CFOP_FACTORY() {
     anim = { axis: move.axis, cs, from: 0, to: move.angle, start: performance.now(), dur: Math.max(dur, 16), kind, move };
   }
   function stepAnim(now) {
-    if (!anim && queue.length && drag.mode !== 'turn') startNext();
+    if (!anim && queue.length) startNext();
     if (!anim) return;
     const p = Math.min(1, (now - anim.start) / anim.dur);
     pivot.rotation.set(0, 0, 0);
@@ -1535,18 +1479,12 @@ function CFOP_FACTORY() {
 
   function afterMove(done) {
     if (done.kind === 'scramble' && !queue.some(q => q.kind === 'scramble')) {
-      phase = 'inspect'; moveCount = 0; elapsed = 0;
+      phase = 'inspect'; elapsed = 0;
       markScramble(Infinity);
-      bigScrambleBtn.disabled = false;
     }
     if (!queue.length) {
       const solved = isSolved();
-      if (phase === 'timing' && solved) {
-        elapsed = performance.now() - t0;
-        phase = 'free';
-        const entry = recordTime({ kind: 'cube', ms: elapsed, moves: moveCount });
-        toast(`Solved in ${fmtTime(elapsed)} · ${moveCount} moves${entry.best ? ' · new best!' : ''}`);
-      }
+      if (!solved && !sol) solveWhenIdle = true;   // the CFOP solution shows as soon as the cube comes to rest
       if (solved && phase === 'inspect') phase = 'free';
       refresh(solved);
       if (done.kind === 'cfop' && solved && sol && sol.pos === sol.flat.length) {
@@ -1558,19 +1496,9 @@ function CFOP_FACTORY() {
     if (solveWhenIdle && !queue.length && !anim) requestSolve();
   }
 
-  function recordUser(move) {
-    invalidateSolution();
-    history.push({ move, kind: 'user' });
-    moveCount++;
-    if (phase === 'inspect') { phase = 'timing'; t0 = performance.now(); }
-    renderHistory();
-    movesEl.textContent = moveCount;
-  }
-  function doUser(move) { recordUser(move); enqueue(move, 'user'); setChip('turning'); }
-
+  // Always starts from a solved cube: whatever is turning or half-scrambled is snapped back first
   function scramble() {
-    if (drag.mode === 'turn' || phase === 'scrambling') return;
-    invalidateSolution();
+    reset();
     const faces = ['R', 'L', 'U', 'D', 'F', 'B'], sufs = ['', "'", '2'];
     let lastAxis = -1;
     const names = [];
@@ -1589,35 +1517,31 @@ function CFOP_FACTORY() {
       enqueue(m, 'scramble', factor, i);
     });
     showScramble(names);
-    bigScrambleBtn.disabled = true;
-    phase = 'scrambling'; moveCount = 0; elapsed = 0;
-    movesEl.textContent = '0';
+    phase = 'scrambling'; elapsed = 0;
     renderHistory(); setChip('turning');
   }
   // Put the cube back into the last scramble, from whatever state it is in now
   function restoreScramble() {
-    if (!scrambleNames.length || drag.mode === 'turn' || phase === 'scrambling') return;
+    if (!scrambleNames.length || phase === 'scrambling') return;
     if (sol && sol.flat) {                 // still on the solution's path: just turn it back
       solutionRewind();
       return;
     }
-    const reopen = solCache.size > 0;
     invalidateSolution();
     queue.length = 0; anim = null;
     build();
     history = [];
-    applyScramble(scrambleNames.slice(), 0.12);
-    if (reopen) requestSolve();            // waits for the scramble, then shows the saved solutions
+    applyScramble(scrambleNames.slice(), 0.12);   // the saved solutions come back from the cache once it lands
   }
   function undo() {
-    if (drag.mode === 'turn' || !history.length) return;
+    if (!history.length) return;
     invalidateSolution();
     const h = history.pop();
     enqueue(inverse(h.move), 'undo');
     renderHistory(); setChip('turning');
   }
   function rewind() {
-    if (drag.mode === 'turn' || !history.length) return;
+    if (!history.length) return;
     invalidateSolution();
     const inv = history.slice().reverse().map(h => inverse(h.move));
     history = [];
@@ -1628,13 +1552,10 @@ function CFOP_FACTORY() {
   }
   function reset() {
     invalidateSolution();
-    queue.length = 0; anim = null; drag.mode = null;
-    canvas.classList.remove('dragging');
+    queue.length = 0; anim = null;
     build();
-    history = []; phase = 'free'; moveCount = 0; elapsed = 0;
-    movesEl.textContent = '0';
+    history = []; phase = 'free'; elapsed = 0;
     scrambleBar.hidden = true;
-    bigScrambleBtn.disabled = false;
     renderHistory(); refresh(true);
   }
 
@@ -1671,7 +1592,6 @@ function CFOP_FACTORY() {
 
   // ---------- CFOP solution ----------
   const appEl = document.getElementById('app');
-  const solEl = document.getElementById('solution');
   const solMsg = document.getElementById('sol-msg');
   const solTotal = document.getElementById('sol-total');
   const solSum = document.getElementById('sol-sum');
@@ -1686,7 +1606,6 @@ function CFOP_FACTORY() {
   const solNext = document.getElementById('sol-next');
   const solPos = document.getElementById('sol-pos');
   const solRestart = document.getElementById('sol-restart');
-  const cfopBtn = document.getElementById('btn-cfop');
 
   const MODE_NOTES = {
     human: 'Turns the cube with y so each pair sits in a front slot, then inserts it with R, U, F and L. Longer, but it reads like real F2L.',
@@ -1728,9 +1647,9 @@ function CFOP_FACTORY() {
     }, 30);
   }
 
+  // The column is always there on wide screens; 'with-sol' marks a solve in progress or on show
+  const solActive = () => appEl.classList.contains('with-sol');
   function openSolPanel() {
-    if (!solEl.hidden) return;
-    solEl.hidden = false;
     appEl.classList.add('with-sol');
   }
   let solveWhenIdle = false;
@@ -1742,20 +1661,18 @@ function CFOP_FACTORY() {
       solveWhenIdle = true;
       sol = null;
       showSolMessage('Waiting for the cube to stop turning…', true);
-      cfopBtn.disabled = true;
       return;
     }
     solveWhenIdle = false;
     const id = ++pendingId;
     sol = null;
     showSolMessage('Reading the cube…', true);
-    cfopBtn.disabled = true;
     const data = stickers();
     const algs = algConfig();
     const key = solMode + '#' + JSON.stringify(algs) + '#' + stateKey(data);
     requestSolve.version = cubeVersion;
     requestSolve.key = key;
-    if (solCache.has(key)) { cfopBtn.disabled = false; showResults(solCache.get(key)); return; }
+    if (solCache.has(key)) { showResults(solCache.get(key)); return; }
     const w = getWorker();
     if (w) w.postMessage({ id, stickers: data, mode: solMode, algs }); else solveLocally(id, data, solMode, algs);
   }
@@ -1767,7 +1684,6 @@ function CFOP_FACTORY() {
       else showSolMessage(`Trying each cross color · ${p.done + 1} of ${p.total}…`, true);
       return;
     }
-    cfopBtn.disabled = false;
     if (requestSolve.version !== cubeVersion) { closeSolution(); return; }
     if (msg.type === 'error') {
       const fix = /algorithms/.test(msg.message) ? ' <button type="button" class="link" data-open-algs>Choose algorithms</button>' : '';
@@ -1791,8 +1707,8 @@ function CFOP_FACTORY() {
     solNote.textContent = MODE_NOTES[solMode];
     renderAlgSummary();
   }
-  function showSolMessage(text, spinning) {
-    openSolPanel();
+  function showSolMessage(text, spinning, idle) {
+    if (!idle) openSolPanel();
     renderMode();
     solMsg.hidden = false;
     solMsg.innerHTML = (spinning ? '<span class="spinner" aria-hidden="true"></span>' : '') + `<span>${text}</span>`;
@@ -1862,7 +1778,7 @@ function CFOP_FACTORY() {
   }
   function solutionStep() {
     if (!sol || !sol.flat || busy() || sol.pos >= sol.flat.length) return false;
-    if (phase === 'inspect' || phase === 'timing') phase = 'free';
+    if (phase === 'inspect') phase = 'free';
     const m = moveFromToken(sol.flat[sol.pos].tok);
     sol.pos++;
     history.push({ move: m, kind: 'cfop' });
@@ -1930,7 +1846,7 @@ function CFOP_FACTORY() {
   function invalidateSolution() {
     cancelRace();
     cubeVersion++;
-    if (solEl.hidden) return;
+    if (!solActive()) return;
     closeSolution();
   }
   function closeSolution() {
@@ -1939,9 +1855,11 @@ function CFOP_FACTORY() {
     solveWhenIdle = false;
     sol = null;
     pendingId++;
-    cfopBtn.disabled = false;
-    solEl.hidden = true;
     appEl.classList.remove('with-sol');
+    showSolIdle();
+  }
+  function showSolIdle() {
+    showSolMessage('Scramble the cube (<kbd>S</kbd>); its CFOP solution shows here, step by step, as soon as the scramble finishes.', false, true);
   }
 
   // Stage boundaries: Next / Prev step move a whole stage (Cross, F2L 1, …, OLL, PLL) at a time
@@ -1993,11 +1911,10 @@ function CFOP_FACTORY() {
     const switchMode = () => {
       solMode = b.dataset.mode;
       try { localStorage.setItem('cfop-mode', solMode); } catch (_) {}
-      requestSolve();
+      if (solActive()) requestSolve(); else renderMode();
     };
     if (sol && sol.flat && sol.pos > 0) solutionRewind(switchMode); else switchMode();
   });
-  cfopBtn.addEventListener('click', requestSolve);
 
   // ---------- race: your real cube against the chosen CFOP solution ----------
   // Hold Space (or the Race button) until the time turns green, release to start: the solution
@@ -2011,7 +1928,7 @@ function CFOP_FACTORY() {
   let race = null;     // { t0, you, cfop, done } from the start until the next change to the cube
 
   function raceBlocker() {
-    if (!sol || !sol.flat) return isSolved() ? 'Scramble first (S), then get a CFOP solution (Enter)' : 'Get a CFOP solution first (Enter)';
+    if (!sol || !sol.flat) return isSolved() ? 'Scramble first (S)' : 'Wait for the CFOP solution';
     if (sol.rewinding || busy()) return 'Wait for the cube to stop turning';
     return '';
   }
@@ -2283,7 +2200,7 @@ function CFOP_FACTORY() {
     renderAlgSummary();
     if (!algsChanged) return;
     algsChanged = false;
-    if (solEl.hidden) return;
+    if (!solActive()) return;
     if (sol && sol.flat && sol.pos > 0) solutionRewind(requestSolve); else requestSolve();
   }
   function closeAlgDialog() {
@@ -2505,7 +2422,6 @@ function CFOP_FACTORY() {
   }
   const closeF2L = () => { if (f2lDlg.close) f2lDlg.close(); else f2lDlg.removeAttribute('open'); };
   function setUpF2L(i, watch) {
-    if (drag.mode === 'turn') return;
     closeF2L();
     reset();
     applyScramble(f2lSetup(i), 0.35);
@@ -2534,51 +2450,26 @@ function CFOP_FACTORY() {
     if (b) setUpF2L(Number(b.closest('.f2l-card').dataset.i), b.dataset.act === 'watch');
   });
 
-  // ---------- pointer interaction ----------
-  const raycaster = new THREE.Raycaster();
+  // ---------- pointer interaction: orbit and zoom only, the cube is never turned by hand ----------
   const pointers = new Map();
   const drag = { mode: null };
-
-  function ndc(e) {
-    const r = canvas.getBoundingClientRect();
-    return new THREE.Vector2(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
-  }
-  function toScreen(v) {
-    const p = v.clone().project(camera), r = canvas.getBoundingClientRect();
-    return new THREE.Vector2((p.x + 1) / 2 * r.width, (1 - p.y) / 2 * r.height);
-  }
-  function pick(e) {
-    raycaster.setFromCamera(ndc(e), camera);
-    const hit = raycaster.intersectObjects(bodies, false)[0];
-    if (!hit) return null;
-    const n = hit.face.normal.clone().transformDirection(hit.object.matrixWorld);
-    const a = [Math.abs(n.x), Math.abs(n.y), Math.abs(n.z)];
-    const axis = a.indexOf(Math.max(...a));
-    const normal = new THREE.Vector3(); normal.setComponent(axis, Math.sign(n.getComponent(axis)));
-    return { cubie: hit.object.userData.cubie, normal, point: hit.point.clone() };
-  }
 
   canvas.addEventListener('pointerdown', e => {
     canvas.setPointerCapture(e.pointerId);
     pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
-    if (pointers.size === 2 && drag.mode !== 'turn') {
+    if (pointers.size === 2) {
       const [a, b] = [...pointers.values()];
       drag.mode = 'pinch'; drag.dist = Math.hypot(a.x - b.x, a.y - b.y); drag.zoom0 = zoom;
       return;
     }
     if (pointers.size > 1) return;
-    const hit = !anim && !queue.length ? pick(e) : null;
-    drag.sx = e.clientX; drag.sy = e.clientY; drag.lx = e.clientX; drag.ly = e.clientY;
-    drag.mode = hit ? 'pending' : 'orbit';
-    drag.hit = hit;
+    drag.lx = e.clientX; drag.ly = e.clientY;
+    drag.mode = 'orbit';
     canvas.classList.add('dragging');
   });
 
   canvas.addEventListener('pointermove', e => {
-    if (!pointers.has(e.pointerId)) {
-      if (e.pointerType === 'mouse') canvas.classList.toggle('on-cube', !busy() && !!pick(e));
-      return;
-    }
+    if (!pointers.has(e.pointerId)) return;
     pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
 
     if (drag.mode === 'pinch' && pointers.size === 2) {
@@ -2590,40 +2481,6 @@ function CFOP_FACTORY() {
       theta -= (e.clientX - drag.lx) * 0.008;
       phi = THREE.MathUtils.clamp(phi - (e.clientY - drag.ly) * 0.008, 0.12, Math.PI - 0.12);
       drag.lx = e.clientX; drag.ly = e.clientY;
-      return;
-    }
-    const dx = e.clientX - drag.sx, dy = e.clientY - drag.sy;
-    if (drag.mode === 'pending') {
-      if (Math.hypot(dx, dy) < 7) return;
-      if (anim || queue.length) { drag.mode = 'orbit'; return; }
-      // Pick the in-face direction whose on-screen projection best matches the drag
-      const { normal, point, cubie } = drag.hit;
-      const p0 = toScreen(point);
-      let best = null;
-      for (let i = 0; i < 3; i++) {
-        if (normal.getComponent(i) !== 0) continue;
-        const d3 = new THREE.Vector3(); d3.setComponent(i, 1);
-        const s = toScreen(point.clone().addScaledVector(d3, 0.5)).sub(p0);
-        const len = s.length() || 1;
-        const score = Math.abs((dx * s.x + dy * s.y) / len);
-        if (!best || score > best.score) best = { score, d3, s, len };
-      }
-      const r = new THREE.Vector3().crossVectors(normal, best.d3);
-      const ra = [Math.abs(r.x), Math.abs(r.y), Math.abs(r.z)];
-      const axis = ra.indexOf(Math.max(...ra));
-      drag.axis = axis;
-      drag.rsign = Math.sign(r.getComponent(axis));
-      drag.sdir = best.s.clone().divideScalar(best.len);
-      drag.pxPerUnit = best.len / 0.5;
-      drag.layer = Math.round(cubie.position.getComponent(axis));
-      drag.cs = grab(axis, [drag.layer]);
-      drag.mode = 'turn';
-    }
-    if (drag.mode === 'turn') {
-      const along = dx * drag.sdir.x + dy * drag.sdir.y;
-      drag.angle = drag.rsign * (along / drag.pxPerUnit) / 1.5;
-      pivot.rotation.set(0, 0, 0);
-      pivot.rotation[AX[drag.axis]] = drag.angle;
     }
   });
 
@@ -2633,21 +2490,6 @@ function CFOP_FACTORY() {
     if (drag.mode === 'pinch') { if (pointers.size === 0) drag.mode = null; else drag.mode = 'idle'; return; }
     if (pointers.size) return;
     canvas.classList.remove('dragging');
-    if (drag.mode === 'turn') {
-      const a = drag.angle || 0;
-      const q = Math.sign(a) * Math.floor(Math.abs(a) / Q + 0.62);
-      let move = null;
-      if (q % 4 !== 0) {
-        const key = Object.keys(BASE).find(k => BASE[k].axis === drag.axis && BASE[k].layers.length === 1 && BASE[k].layers[0] === drag.layer);
-        const rel = (((q * BASE[key].dir) % 4) + 4) % 4; // turns in the move's clockwise sense
-        move = makeMove(key, rel === 2 ? '2' : rel === 3 ? "'" : '');
-        move.angle = q * Q;
-        recordUser(move);
-      }
-      const span = Math.abs(q * Q - a) / Q;
-      anim = { axis: drag.axis, cs: drag.cs, from: a, to: q * Q, start: performance.now(),
-               dur: Math.max(60, speedMs * THREE.MathUtils.clamp(span, 0.35, 1.4)), kind: move ? 'user' : 'none', move };
-    }
     drag.mode = null;
   }
   canvas.addEventListener('pointerup', endPointer);
@@ -2659,7 +2501,6 @@ function CFOP_FACTORY() {
 
   // ---------- UI ----------
   const chipEl = document.getElementById('chip');
-  const movesEl = document.getElementById('moves');
   const timeEl = document.getElementById('time');
   const toastEl = document.getElementById('toast');
   const histEl = document.getElementById('history');
@@ -2694,17 +2535,15 @@ function CFOP_FACTORY() {
   }
 
   // ---------- your times: saved in this browser, with best single and averages ----------
-  // Races (your real cube vs the CFOP solution) and virtual-cube solves are kept apart.
+  // Only races (your real cube vs the CFOP solution) are shown; older virtual-cube entries stay stored but hidden.
   // ao5 / ao12 drop the best and worst time (WCA style); ao3 is the plain mean of 3.
   // +2 adds two seconds, DNF counts as the worst time; an average with too many DNFs is a DNF.
   const TIMES_KEY = 'rubik-times-v1';
   const tstatsEl = document.getElementById('tstats');
   const tlistEl = document.getElementById('tlist');
   const timesCountEl = document.getElementById('times-count');
-  const timesKindEl = document.getElementById('times-kind');
   const timesClearBtn = document.getElementById('times-clear');
   let times = [];          // oldest first: { id, kind, ms, pen: '' | '+2' | 'dnf', cfop, moves, scramble, date }
-  let timesKind = 'race';
   try {
     const saved = JSON.parse(localStorage.getItem(TIMES_KEY) || '[]');
     if (Array.isArray(saved)) times = saved.filter(t => t && typeof t.ms === 'number' && (t.kind === 'race' || t.kind === 'cube'));
@@ -2734,7 +2573,6 @@ function CFOP_FACTORY() {
                     cfop: cfop === null ? null : Math.round(cfop), moves, scramble: scrambleText || '', date: new Date().toISOString() };
     times.push(entry);
     saveTimes();
-    timesKind = kind;
     renderTimes();
     return { ...entry, best: prev.length > 0 && ms < Math.min(...prev) };
   }
@@ -2747,8 +2585,7 @@ function CFOP_FACTORY() {
     renderTimes();
   }
   function renderTimes() {
-    const list = ofKind(timesKind), vals = list.map(valueOf);
-    timesKindEl.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.kind === timesKind)));
+    const list = ofKind('race'), vals = list.map(valueOf);
     timesCountEl.textContent = list.length;
     const ok = vals.filter(v => v !== Infinity);
     const stats = [
@@ -2757,26 +2594,17 @@ function CFOP_FACTORY() {
       ['Best ao5', vals.length >= 5 ? bestAvg(vals, 5) : null], ['Best ao12', vals.length >= 12 ? bestAvg(vals, 12) : null],
       ['Mean', ok.length ? ok.reduce((a, b) => a + b, 0) / ok.length : null],
     ];
-    let extra = '';
-    if (timesKind === 'race') {
-      const raced = list.filter(t => t.cfop !== null);
-      const won = raced.filter(t => valueOf(t) <= t.cfop).length;
-      extra = `<div class="tstat" title="Races where your time beat the CFOP solution"><span>Won</span><b>${raced.length ? `${won} / ${raced.length}` : '–'}</b></div>`;
-    } else {
-      const withMoves = list.filter(t => t.moves);
-      extra = `<div class="tstat" title="Average number of moves per solve"><span>Avg moves</span><b>${withMoves.length ? Math.round(withMoves.reduce((a, t) => a + t.moves, 0) / withMoves.length) : '–'}</b></div>`;
-    }
+    const raced = list.filter(t => t.cfop !== null);
+    const won = raced.filter(t => valueOf(t) <= t.cfop).length;
+    const extra = `<div class="tstat" title="Races where your time beat the CFOP solution"><span>Won</span><b>${raced.length ? `${won} / ${raced.length}` : '–'}</b></div>`;
     tstatsEl.innerHTML = stats.map(([k, v]) => `<div class="tstat"><span>${k}</span><b>${fmtVal(v)}</b></div>`).join('') + extra;
     timesClearBtn.hidden = !list.length;
     if (!list.length) {
-      tlistEl.innerHTML = `<li class="empty">${timesKind === 'race'
-        ? 'No races yet. Scramble, get a CFOP solution, then hold and release Space.'
-        : 'No timed solves yet. Scramble, then solve the cube on screen; the timer starts with your first turn.'}</li>`;
+      tlistEl.innerHTML = '<li class="empty">No races yet. Scramble, get a CFOP solution, then hold and release Space.</li>';
       return;
     }
     tlistEl.innerHTML = list.map((t, i) => [t, i]).reverse().slice(0, 300).map(([t, i]) => {
-      const vs = t.kind === 'race' && t.cfop !== null
-        ? `<small class="${valueOf(t) <= t.cfop ? 'won' : ''}">vs ${fmtTime(t.cfop)}</small>` : t.moves ? `<small>${t.moves} moves</small>` : '';
+      const vs = t.cfop !== null ? `<small class="${valueOf(t) <= t.cfop ? 'won' : ''}">vs ${fmtTime(t.cfop)}</small>` : '';
       const tip = `${new Date(t.date).toLocaleString()}${t.scramble ? ` · ${t.scramble}` : ''}`;
       return `<li data-id="${t.id}" title="${tip}"><span class="i">${i + 1}.</span><b>${fmtVal(valueOf(t))}</b>${t.pen === '+2' ? '<span class="pen">+2</span>' : ''}${vs}
         <span class="act">
@@ -2796,14 +2624,10 @@ function CFOP_FACTORY() {
     saveTimes();
     renderTimes();
   });
-  timesKindEl.addEventListener('click', e => {
-    const b = e.target.closest('button[data-kind]');
-    if (b && b.dataset.kind !== timesKind) { timesKind = b.dataset.kind; renderTimes(); }
-  });
   timesClearBtn.addEventListener('click', () => {
-    const n = ofKind(timesKind).length;
-    if (!confirm(`Delete all ${n} ${timesKind === 'race' ? 'race' : 'virtual-cube'} times? This can't be undone.`)) return;
-    times = times.filter(t => t.kind !== timesKind);
+    const n = ofKind('race').length;
+    if (!confirm(`Delete all ${n} race times? This can't be undone.`)) return;
+    times = times.filter(t => t.kind !== 'race');
     saveTimes();
     renderTimes();
   });
@@ -2860,60 +2684,11 @@ function CFOP_FACTORY() {
   }
   new ResizeObserver(() => { if (!busy()) drawNet(); }).observe(netEl);
 
-  // turn pad
-  const pad = document.getElementById('pad');
-  const rows = [['U', 'D', 'L', 'R', 'F', 'B'], ['u', 'd', 'l', 'r', 'f', 'b'], ['M', 'E', 'S', 'x', 'y', 'z']];
-  rows.forEach((row, ri) => {
-    for (const suf of ['', "'"]) {
-      for (const k of row) {
-        const wide = 'udlrfb'.includes(k);
-        const b = document.createElement('button');
-        b.type = 'button';
-        b.textContent = k + suf;
-        b.title = wide ? `Wide turn ${k + suf} (${k.toUpperCase()}w${suf}): two layers` : `Turn ${k + suf}`;
-        const col = COLORS[k] || (wide && COLORS[k.toUpperCase()]);
-        if (col) {
-          const sw = document.createElement('span');
-          sw.className = wide ? 'sw w' : 'sw'; sw.style.background = col;
-          b.appendChild(sw);
-        }
-        b.addEventListener('click', () => { if (drag.mode !== 'turn') doUser(makeMove(k, suf)); });
-        pad.appendChild(b);
-      }
-    }
-    if (ri < rows.length - 1) { const g = document.createElement('div'); g.className = 'gap'; pad.appendChild(g); }
-  });
-
   document.getElementById('btn-scramble').addEventListener('click', scramble);
   bigScrambleBtn.addEventListener('click', scramble);
   document.getElementById('btn-undo').addEventListener('click', undo);
   document.getElementById('btn-rewind').addEventListener('click', rewind);
   document.getElementById('btn-reset').addEventListener('click', reset);
-
-  const algInput = document.getElementById('alg-input');
-  const algErr = document.getElementById('alg-err');
-  function playAlg(text) {
-    try {
-      const moves = parseAlg(text);
-      algErr.hidden = true;
-      if (!moves.length) return;
-      for (const m of moves) doUser(m);
-    } catch (err) {
-      algErr.textContent = err.message + '. Use moves like R U R\' U2, slices M E S, wide r or Rw, rotations x y z.';
-      algErr.hidden = false;
-    }
-  }
-  document.getElementById('alg-form').addEventListener('submit', e => {
-    e.preventDefault();
-    if (drag.mode !== 'turn') playAlg(algInput.value);
-  });
-  const presetsEl = document.getElementById('presets');
-  for (const [label, alg] of PRESETS) {
-    const b = document.createElement('button');
-    b.type = 'button'; b.textContent = label; b.title = alg;
-    b.addEventListener('click', () => { algInput.value = alg; if (drag.mode !== 'turn') playAlg(alg); });
-    presetsEl.appendChild(b);
-  }
 
   const speedEl = document.getElementById('speed');
   const speedOut = document.getElementById('speed-out');
@@ -2922,11 +2697,7 @@ function CFOP_FACTORY() {
   speedEl.addEventListener('input', applySpeed);
   applySpeed();
 
-  const KEYMAP = { U: 'U', D: 'D', L: 'L', R: 'R', F: 'F', B: 'B', M: 'M', E: 'E', X: 'x', Y: 'y', Z: 'z' };
-  // W arms a wide turn: the next face key turns two layers (W then R = r, like Rw)
-  const wideChip = document.getElementById('wide-chip');
-  let wideArmed = false;
-  function setWide(on) { wideArmed = on; wideChip.hidden = !on; }
+  // No face-turn keys: the cube only moves by scrambles and the CFOP solution
   window.addEventListener('keydown', e => {
     if (algDlg.open || f2lDlg.open) return;
     if (race && !race.done) { e.preventDefault(); raceYouDone(); return; }   // any key stops your time
@@ -2935,22 +2706,10 @@ function CFOP_FACTORY() {
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') { e.preventDefault(); undo(); return; }
     if (e.ctrlKey || e.metaKey || e.altKey || e.repeat) return;
     if (e.key === 'Backspace') { e.preventDefault(); undo(); return; }
-    const onButton = e.target.closest && e.target.closest('button');
-    if (e.key.toLowerCase() === 's') { e.preventDefault(); setWide(false); scramble(); return; }
-    if (e.key === 'Enter' && !onButton) { e.preventDefault(); requestSolve(); return; }
+    if (e.key.toLowerCase() === 's') { e.preventDefault(); scramble(); return; }
     if ((e.key === 'ArrowRight' || e.key === 'ArrowLeft') && sol && sol.flat) {
       e.preventDefault();
       singleMove(e.key === 'ArrowRight');
-      return;
-    }
-    if (e.key === 'Escape' && wideArmed) { setWide(false); return; }
-    if (e.key.toUpperCase() === 'W') { e.preventDefault(); setWide(!wideArmed); return; }
-    const k = KEYMAP[e.key.toUpperCase()];
-    if (k && drag.mode !== 'turn') {
-      e.preventDefault();
-      const key = wideArmed && 'UDLRFB'.includes(k) ? k.toLowerCase() : k;
-      setWide(false);
-      doUser(makeMove(key, e.shiftKey ? "'" : ''));
     }
   });
 
@@ -2968,8 +2727,7 @@ function CFOP_FACTORY() {
     if (race) {
       timeEl.textContent = fmtTime(race.you !== null ? race.you : now - race.t0);
       raceTimeEl.textContent = fmtTime(race.cfop !== null ? race.cfop : now - race.t0);
-    } else if (phase === 'timing') timeEl.textContent = fmtTime(now - t0);
-    else if (phase === 'inspect' || phase === 'scrambling') timeEl.textContent = fmtTime(0);
+    } else if (phase === 'inspect' || phase === 'scrambling') timeEl.textContent = fmtTime(0);
     else timeEl.textContent = fmtTime(elapsed);
     updateCamera();
     renderer.render(scene, camera);
@@ -2981,6 +2739,7 @@ function CFOP_FACTORY() {
   resize();
   measureBands();
   renderHistory();
+  showSolIdle();
   refresh(true);
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(drawNet);
   requestAnimationFrame(frame);

@@ -1,6 +1,6 @@
 # Rubik's Cube Lab
 
-An interactive 3D Rubik's cube that runs in the browser. Scramble it, turn it by hand or from the keyboard, and watch a step-by-step CFOP solution.
+An interactive 3D Rubik's cube that runs in the browser. Scramble it, get a step-by-step CFOP solution right away, and race it with your real cube.
 
 **Try it: https://michitruste.github.io/rubik/**
 
@@ -8,25 +8,21 @@ An interactive 3D Rubik's cube that runs in the browser. Scramble it, turn it by
 
 ## Features
 
-- **3D cube**: drag a face to turn it, drag the background to orbit, scroll or pinch to zoom.
-- **Every move in Singmaster notation**: face turns, wide turns (`r u f…`), slices (`M E S`) and whole-cube rotations (`x y z`), plus a box to type and play any algorithm.
-- **Random scrambles** (22 moves) that you can copy and go back to.
-- **CFOP solver** that shows the cross, the four F2L pairs, OLL and PLL. Play it all at once or step by step, with a diagram for each step.
+- **3D cube**: drag to orbit, scroll or pinch to zoom. It is only turned by scrambles and the solution, never by hand.
+- **Random scrambles** (22 moves, Singmaster notation), always from a solved cube, that you can copy and go back to.
+- **Race the CFOP solution**: solve your real cube while the solution plays on screen, and keep your times (best, ao5, ao12, wins).
+- **CFOP solver** that runs as soon as a scramble finishes and shows the cross, the four F2L pairs, OLL and PLL. Play it all at once or step by step, with a diagram for each step.
   - *Human-style* or *fewest moves* solutions, with any cross color.
   - Choose which OLL and PLL cases and algorithms it may use: the full 1-look set, the 2-look beginner set, or your own. Export your choices to a file and import them again.
-- **Flat net** of all six faces, a move history, a move counter and a timer.
+- **Flat net** of all six faces, a move history and a timer.
 - Light and dark themes, and it works on phones.
 
 ## Keyboard
 
 | Keys | Action |
 | --- | --- |
-| `U` `D` `L` `R` `F` `B` | Face turns (hold `Shift` for prime) |
-| `W`, then a face | Wide turn |
-| `M` `E` `S` | Slice turns |
-| `X` `Y` `Z` | Whole-cube rotations |
-| `Space` | Scramble |
-| `Enter` | Solve with CFOP |
+| `S` | Scramble (resets the cube first) |
+| Hold and release `Space` | Race the CFOP solution; any key stops your time |
 | `←` `→` | Step one solution move |
 | `Backspace` | Undo |
 
